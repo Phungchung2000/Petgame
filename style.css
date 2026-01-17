@@ -313,4 +313,35 @@ input:not(:disabled) { background-color: #fff; border: 1px solid var(--vovinam-b
 /* 3. Hiện menu khi rê chuột vào (hoặc giữ nguyên logic cũ) */
 .user-dropdown:hover .user-dropdown-content { 
     display: block; 
+
+}
+/* --- CSS CHO PHẦN GHI CHÚ & LƯU ĐIỂM DANH --- */
+.note-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+    font-size: 0.9rem;
+}
+.note-input:focus {
+    border-color: var(--vovinam-blue);
+    background-color: #f0f8ff;
+}
+
+.btn-save-attendance {
+    background-color: #28a745; /* Màu xanh lá */
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+.btn-save-attendance:hover {
+    background-color: #218838;
+    transform: scale(1.05);
 }
