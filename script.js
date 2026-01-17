@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// --- 2. CẤU HÌNH KẾT NỐI (Đã điền đúng thông tin từ ảnh của bạn) ---
+// --- 2. CẤU HÌNH KẾT NỐI (Đã điền đúng thông tin của bạn) ---
 const firebaseConfig = {
     apiKey: "AIzaSyDn0yqXve0rYSEKFommFKV8J-McHEU-Nh4",
     authDomain: "vovinam-web-4eb57.firebaseapp.com",
@@ -57,7 +57,6 @@ onSnapshot(qPosts, (snapshot) => {
 checkLoginStatus();
 
 // --- 5. CÁC HÀM HỖ TRỢ & GIAO DIỆN ---
-// Lưu ý: Vì dùng type="module", các hàm được gọi từ HTML (onclick) cần gán vào window
 
 window.showSection = function(sectionId) {
     document.querySelectorAll('main > section').forEach(sec => sec.style.display = 'none');
@@ -68,7 +67,17 @@ window.showSection = function(sectionId) {
 function isAdmin() { return currentUser && currentUser.phone === '000'; }
 window.formatDoc = function(cmd, value = null) { document.execCommand(cmd, false, value); }
 
-// --- 6. AUTHENTICATION (ĐĂNG KÝ / ĐĂNG NHẬP) ---
+// Hàm đọc file ảnh thành Base64 (Dùng cho Avatar)
+const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+}
+
+// --- 6. AUTHENTICATION ---
 
 // ĐĂNG KÝ (Lưu lên Firebase)
 document.getElementById('register-form').addEventListener('submit', async function(e) {
@@ -79,11 +88,10 @@ document.getElementById('register-form').addEventListener('submit', async functi
     const club = document.getElementById('reg-club').value;
 
     if (!club) { alert("Vui lòng chọn Câu Lạc Bộ!"); return; }
-    // Kiểm tra trùng SĐT trong danh sách đã tải về
     if (students.some(s => s.phone === phone)) { alert("Số điện thoại này đã được đăng ký!"); return; }
 
     const newStudent = {
-        id: Date.now(), // ID số để sort nếu cần
+        id: Date.now(), 
         club: club, name: name, phone: phone, dob: dob,
         img: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
         isPresent: false
@@ -91,7 +99,7 @@ document.getElementById('register-form').addEventListener('submit', async functi
 
     try {
         await addDoc(collection(db, COLL_STUDENTS), newStudent);
-        alert("Đăng ký thành công! Dữ liệu đã lên hệ thống Online. Vui lòng đăng nhập.");
+        alert("Đăng ký thành công! Vui lòng đăng nhập.");
         document.getElementById('register-form').reset();
         window.showSection('login');
     } catch (error) {
@@ -131,7 +139,7 @@ function checkLoginStatus() {
 
     if (currentUser) {
         authActions.style.display = 'none';
-        userDisplay.style.display = 'block'; // Hiện dropdown user
+        userDisplay.style.display = 'block'; 
         userNameSpan.innerText = isAdmin() ? `HLV: ${currentUser.name}` : `Môn sinh: ${currentUser.name}`;
 
         menuItems.forEach(item => {
@@ -143,6 +151,7 @@ function checkLoginStatus() {
         userDisplay.style.display = 'none';
         menuItems.forEach(item => item.style.display = 'block');
     }
+    renderNews();
 }
 
 window.logout = function() {
@@ -181,6 +190,7 @@ window.switchTab = function(tabId) {
     }
 }
 
+// CẬP NHẬT: THÊM NÚT XÓA VÀO BẢNG
 function renderAttendanceTable() {
     const tbody = document.getElementById('attendance-list');
     tbody.innerHTML = "";
@@ -191,45 +201,97 @@ function renderAttendanceTable() {
 
     clubStudents.forEach((student, index) => {
         const tr = document.createElement('tr');
-        // Nút gạt điểm danh (Admin mới dùng được) - Gọi hàm update online
+        
+        // Cột điểm danh
         let statusHTML = isAdmin() 
             ? `<label class="switch"><input type="checkbox" ${student.isPresent ? 'checked' : ''} onchange="toggleAttendance('${student.firebaseId}', ${!student.isPresent})"><span class="slider"></span></label>`
             : (student.isPresent ? `<span style="color:green;font-weight:bold;">Có mặt</span>` : `<span style="color:red;font-weight:bold;">Vắng</span>`);
         
+        // Nút xóa (Chỉ Admin thấy)
+        let deleteBtn = isAdmin() 
+            ? ` <i class="fas fa-trash" style="color: #ff4444; cursor: pointer; margin-left: 10px; font-size: 0.9em;" onclick="deleteStudent('${student.firebaseId}', '${student.name}')" title="Xóa môn sinh này"></i>` 
+            : '';
+
         const isMe = !isAdmin() && currentUser.phone === student.phone;
         const rowStyle = isMe ? 'background-color: #e3f2fd; border-left: 5px solid #0055A4;' : ''; 
         
-        tr.innerHTML = `<td style="${rowStyle}">${index + 1}</td><td style="${rowStyle}"><img src="${student.img}" class="student-avatar"></td><td style="${rowStyle}"><strong>${student.name}</strong> ${isMe ? '(Bạn)' : ''}<br><small>${student.dob}</small></td><td style="${rowStyle}">${statusHTML}</td>`;
+        tr.innerHTML = `
+            <td style="${rowStyle}">${index + 1}</td>
+            <td style="${rowStyle}"><img src="${student.img}" class="student-avatar"></td>
+            <td style="${rowStyle}">
+                <strong>${student.name}</strong> ${isMe ? '(Bạn)' : ''}
+                ${deleteBtn} <br>
+                <small>${student.dob}</small>
+            </td>
+            <td style="${rowStyle}">${statusHTML}</td>
+        `;
         tbody.appendChild(tr);
     });
 }
 
-// CẬP NHẬT ĐIỂM DANH LÊN MÂY
+// HÀM XÓA MÔN SINH (MỚI)
+window.deleteStudent = async function(firebaseId, studentName) {
+    if(!isAdmin()) return;
+    if(confirm(`CẢNH BÁO: Bạn có chắc muốn xóa môn sinh "${studentName}" khỏi danh sách không?\nHành động này không thể hoàn tác!`)) {
+        try {
+            await deleteDoc(doc(db, COLL_STUDENTS, firebaseId));
+            alert("Đã xóa thành công!");
+        } catch (e) {
+            console.error(e);
+            alert("Lỗi khi xóa: " + e.message);
+        }
+    }
+}
+
 window.toggleAttendance = async function(firebaseId, newStatus) {
     if(!firebaseId) return;
     const docRef = doc(db, COLL_STUDENTS, firebaseId);
     await updateDoc(docRef, { isPresent: newStatus });
 }
 
-// THÊM MÔN SINH (Admin)
+// CẬP NHẬT: THÊM MÔN SINH CÓ ẢNH
 document.getElementById('add-student-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const name = document.getElementById('student-name').value;
     const phone = document.getElementById('student-phone').value;
     const dob = document.getElementById('student-dob').value;
+    const imgInput = document.getElementById('student-img'); // Input file từ HTML
+    
+    // Mặc định là ảnh avatar trắng
+    let imgUrl = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+
+    // Xử lý nếu có chọn ảnh
+    if (imgInput.files && imgInput.files[0]) {
+        const file = imgInput.files[0];
+        // Kiểm tra dung lượng (giới hạn 500KB để Firestore không bị quá tải)
+        if (file.size > 500 * 1024) {
+            alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 500KB.");
+            return;
+        }
+        try {
+            imgUrl = await readFileAsBase64(file);
+        } catch (err) {
+            alert("Lỗi đọc file ảnh!");
+            return;
+        }
+    }
     
     const newStudent = { 
         id: Date.now(), club: currentClub, name: name, phone: phone, dob: dob, 
-        img: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png", isPresent: false 
+        img: imgUrl, isPresent: false 
     };
     
-    await addDoc(collection(db, COLL_STUDENTS), newStudent);
-    alert(`Đã thêm môn sinh ${name} lên hệ thống!`);
-    document.getElementById('add-student-form').reset();
-    window.switchTab('attendance');
+    try {
+        await addDoc(collection(db, COLL_STUDENTS), newStudent);
+        alert(`Đã thêm môn sinh ${name} thành công!`);
+        document.getElementById('add-student-form').reset();
+        window.switchTab('attendance');
+    } catch (e) {
+        alert("Lỗi khi lưu dữ liệu: " + e.message);
+    }
 });
 
-// --- 8. PROFILE SYSTEM (CẬP NHẬT LÊN MÂY) ---
+// --- 8. PROFILE SYSTEM ---
 window.showProfile = function() {
     if (!currentUser) return;
     window.showSection('profile');
@@ -291,7 +353,7 @@ window.saveProfile = async function(e) {
     }
 }
 
-// --- 9. NEWS SYSTEM (CẬP NHẬT LÊN MÂY) ---
+// --- 9. NEWS SYSTEM ---
 let currentViewingPostId = null;
 let editingFirebaseId = null; 
 
@@ -346,9 +408,13 @@ window.publishPost = async function() {
 }
 
 window.deletePost = async function(firebaseId) {
-    if (confirm("Xóa bài viết này?")) {
-        await deleteDoc(doc(db, COLL_POSTS, firebaseId));
-        alert("Đã xóa!");
+    if (confirm("Bạn có chắc chắn muốn xóa bài viết này không?")) {
+        try {
+            await deleteDoc(doc(db, COLL_POSTS, firebaseId));
+            alert("Đã xóa bài viết!");
+        } catch (e) {
+            alert("Lỗi khi xóa: " + e.message);
+        }
     }
 }
 
@@ -372,7 +438,16 @@ function renderNews() {
     posts.forEach(post => {
         const div = document.createElement('div');
         div.className = 'news-item';
-        let adminActions = isAdmin() ? `<div class="admin-actions"><button class="btn-edit-post" onclick="editPost('${post.firebaseId}')"><i class="fas fa-edit"></i> Sửa</button><button class="btn-delete-post" onclick="deletePost('${post.firebaseId}')"><i class="fas fa-trash"></i> Xóa</button></div>` : "";
+        
+        let adminActions = "";
+        if (isAdmin()) {
+            adminActions = `
+                <div class="admin-actions">
+                    <button class="btn-edit-post" onclick="editPost('${post.firebaseId}')"><i class="fas fa-edit"></i> Sửa</button>
+                    <button class="btn-delete-post" onclick="deletePost('${post.firebaseId}')"><i class="fas fa-trash-alt"></i> Xóa</button>
+                </div>`;
+        }
+        
         div.innerHTML = `<h3>${post.title}</h3><small style="color:#666;">${post.date}</small><div class="news-preview">${post.content}</div><div class="read-more-btn" onclick="viewPost('${post.firebaseId}')">Xem & Bình luận >></div>${adminActions}`;
         list.appendChild(div);
     });
