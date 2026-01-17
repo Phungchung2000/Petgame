@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// --- 2. CẤU HÌNH KẾT NỐI (Lấy từ ảnh bạn gửi) ---
+// --- 2. CẤU HÌNH KẾT NỐI ---
 const firebaseConfig = {
     apiKey: "AIzaSyDn0yqXve0rYSEKFommFKV8J-McHEU-Nh4",
     authDomain: "vovinam-web-4eb57.firebaseapp.com",
@@ -24,7 +24,7 @@ let currentUser = JSON.parse(localStorage.getItem('vovinamCurrentUser'));
 const COLL_STUDENTS = "students";
 const COLL_POSTS = "posts";
 
-// --- 4. REAL-TIME LISTENER ---
+// --- 4. LẮNG NGHE DỮ LIỆU (REAL-TIME) ---
 onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
     students = [];
     snapshot.forEach((doc) => {
@@ -32,7 +32,7 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         data.firebaseId = doc.id; 
         students.push(data);
     });
-    // Tự động vẽ lại bảng nếu đang mở
+    // Nếu đang mở bảng thì vẽ lại ngay để cập nhật
     if(document.getElementById('club-manager') && document.getElementById('club-manager').style.display === 'block') {
         renderAttendanceTable();
     }
@@ -70,7 +70,9 @@ const readFileAsBase64 = (file) => {
     });
 }
 
-// --- 6. AUTHENTICATION ---
+// --- 6. XỬ LÝ TÀI KHOẢN (NÂNG CẤP) ---
+
+// ĐĂNG KÝ (Cho phép trùng SĐT nếu khác CLB)
 document.getElementById('register-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const name = document.getElementById('reg-name').value;
@@ -79,7 +81,11 @@ document.getElementById('register-form').addEventListener('submit', async functi
     const club = document.getElementById('reg-club').value;
 
     if (!club) { alert("Vui lòng chọn Câu Lạc Bộ!"); return; }
-    if (students.some(s => s.phone === phone)) { alert("Số điện thoại này đã được đăng ký!"); return; }
+    
+    // Kiểm tra: Chỉ chặn nếu SĐT này ĐÃ CÓ trong CLB đó rồi
+    if (students.some(s => s.phone === phone && s.club === club)) { 
+        alert(`Số điện thoại này đã đăng ký tại CLB ${club} rồi!`); return; 
+    }
 
     const newStudent = {
         id: Date.now(), club: club, name: name, phone: phone, dob: dob,
@@ -97,19 +103,35 @@ document.getElementById('register-form').addEventListener('submit', async functi
     }
 });
 
+// ĐĂNG NHẬP (Nâng cấp: Gộp quyền lợi từ nhiều CLB)
 document.getElementById('login-form').addEventListener('submit', function(e) {
     e.preventDefault();
     const name = document.getElementById('login-name').value.trim();
     const phone = document.getElementById('login-phone').value.trim();
 
+    // Admin
     if (phone === '000' && name.toLowerCase() === 'admin') {
-        currentUser = { name: "Huấn Luyện Viên", phone: "000", club: "ALL", role: "admin" };
+        currentUser = { name: "Huấn Luyện Viên", phone: "000", clubs: ["ALL"], role: "admin" };
         loginSuccess(); return;
     }
 
-    const user = students.find(s => s.phone === phone && s.name.toLowerCase() === name.toLowerCase());
-    if (user) { currentUser = user; loginSuccess(); }
-    else { alert("Thông tin không đúng hoặc chưa đăng ký!"); }
+    // Tìm tất cả hồ sơ trùng khớp SĐT và Tên
+    const matchedRecords = students.filter(s => s.phone === phone && s.name.toLowerCase() === name.toLowerCase());
+
+    if (matchedRecords.length > 0) {
+        // Lấy danh sách tất cả các CLB mà người này tham gia
+        const myClubs = matchedRecords.map(s => s.club);
+        
+        // Tạo user session gộp
+        currentUser = {
+            ...matchedRecords[0], // Lấy thông tin cơ bản từ hồ sơ đầu tiên
+            clubs: myClubs,       // Lưu danh sách các CLB được phép xem
+            role: "student"
+        };
+        loginSuccess();
+    } else { 
+        alert("Thông tin không đúng hoặc chưa đăng ký!"); 
+    }
 });
 
 function loginSuccess() {
@@ -119,25 +141,43 @@ function loginSuccess() {
     window.showSection('home');
 }
 
+// Cập nhật giao diện theo quyền hạn mới
 function checkLoginStatus() {
     const authActions = document.getElementById('auth-actions');
     const userDisplay = document.getElementById('user-display');
     const userNameSpan = document.getElementById('user-name-display');
-    const menuItems = document.querySelectorAll('#club-menu-list li');
+    const menuItems = document.querySelectorAll('#club-menu-list li'); // Menu trong index.html cần id="club-menu-list" nếu có, hoặc query selector
+
+    // Vì file HTML hiện tại dùng class dropdown-content cho menu con, ta sẽ trỏ vào đó
+    const clubLinks = document.querySelectorAll('.dropdown-content li');
 
     if (currentUser) {
         authActions.style.display = 'none';
         userDisplay.style.display = 'block'; 
         userNameSpan.innerText = isAdmin() ? `HLV: ${currentUser.name}` : `Môn sinh: ${currentUser.name}`;
 
-        menuItems.forEach(item => {
-            const clubAttr = item.getAttribute('data-club');
-            item.style.display = (isAdmin() || clubAttr === currentUser.club) ? 'block' : 'none';
+        // Logic hiển thị Menu CLB:
+        // Admin thấy hết. Môn sinh chỉ thấy CLB mình có tham gia.
+        clubLinks.forEach(li => {
+            // Lấy tên CLB từ hàm onclick="openClubManager('Tên CLB')"
+            const onclickText = li.getAttribute('onclick');
+            if (onclickText) {
+                // Trích xuất tên CLB từ chuỗi: openClubManager('Nguyễn Huệ') -> Nguyễn Huệ
+                const clubName = onclickText.match(/'([^']+)'/)[1];
+                
+                if (isAdmin() || (currentUser.clubs && currentUser.clubs.includes(clubName))) {
+                    li.style.display = 'block';
+                } else {
+                    li.style.display = 'none';
+                }
+            }
         });
+
     } else {
         authActions.style.display = 'flex';
         userDisplay.style.display = 'none';
-        menuItems.forEach(item => item.style.display = 'block');
+        // Chưa đăng nhập thì hiện hết (nhưng bấm vào sẽ bắt đăng nhập)
+        clubLinks.forEach(li => li.style.display = 'block');
     }
     renderNews();
 }
@@ -152,10 +192,19 @@ window.logout = function() {
 // --- 7. QUẢN LÝ CLB & ĐIỂM DANH ---
 window.openClubManager = function(clubName) {
     if (!currentUser) { alert("Vui lòng đăng nhập!"); window.showSection('login'); return; }
-    if (!isAdmin() && currentUser.club !== clubName) { alert(`Bạn không có quyền xem CLB ${clubName}!`); return; }
+    
+    // Kiểm tra quyền truy cập (Admin hoặc là thành viên của CLB đó)
+    const isMember = currentUser.clubs && currentUser.clubs.includes(clubName);
+    
+    if (!isAdmin() && !isMember) { 
+        alert(`Bạn không phải thành viên CLB ${clubName} nên không thể xem danh sách!`); 
+        return; 
+    }
 
     currentClub = clubName;
     document.getElementById('current-club-title').innerText = `Danh sách: ${clubName}`;
+    
+    // Nút Thêm Môn Sinh: Chỉ Admin thấy
     const btnAdd = document.getElementById('btn-add-student');
     if (btnAdd) btnAdd.style.display = isAdmin() ? 'block' : 'none';
 
@@ -170,12 +219,12 @@ window.switchTab = function(tabId) {
     
     document.getElementById(`tab-${tabId}`).style.display = 'block';
     
-    // --- QUYỀN ADMIN: Hiển thị nút Lưu ---
     const actionDiv = document.getElementById('attendance-actions');
+    
     if(tabId === 'attendance') {
         document.querySelector('.tab-btn').classList.add('active');
         renderAttendanceTable();
-        // Chỉ Admin (SĐT 000) mới thấy nút Lưu
+        // Nút Lưu: Chỉ Admin thấy
         if(actionDiv) actionDiv.style.display = isAdmin() ? 'block' : 'none';
     } else {
         const btnAdd = document.getElementById('btn-add-student');
@@ -184,7 +233,7 @@ window.switchTab = function(tabId) {
     }
 }
 
-// Render Bảng Điểm Danh (Phân quyền Admin/Môn sinh)
+// Render Bảng
 function renderAttendanceTable() {
     const tbody = document.getElementById('attendance-list');
     tbody.innerHTML = "";
@@ -196,21 +245,19 @@ function renderAttendanceTable() {
     clubStudents.forEach((student, index) => {
         const tr = document.createElement('tr');
         
-        // 1. TRẠNG THÁI: Admin hiện checkbox, Môn sinh hiện chữ
         let statusHTML = isAdmin() 
             ? `<label class="switch"><input type="checkbox" id="status-${student.firebaseId}" ${student.isPresent ? 'checked' : ''}><span class="slider"></span></label>`
             : (student.isPresent ? `<span style="color:green;font-weight:bold;">Có mặt</span>` : `<span style="color:red;font-weight:bold;">Vắng</span>`);
         
-        // 2. GHI CHÚ: Admin hiện ô nhập, Môn sinh chỉ hiện chữ
         let noteHTML = isAdmin()
-            ? `<input type="text" class="note-input" id="note-${student.firebaseId}" value="${student.note || ''}" placeholder="Lý do...">`
+            ? `<input type="text" class="note-input" id="note-${student.firebaseId}" value="${student.note || ''}" placeholder="...">`
             : `<span>${student.note || ''}</span>`;
 
-        // 3. XÓA: Chỉ Admin có nút xóa
         let deleteBtn = isAdmin() 
-            ? ` <i class="fas fa-trash" style="color: #ff4444; cursor: pointer; margin-left: 10px;" onclick="deleteStudent('${student.firebaseId}', '${student.name}')" title="Xóa môn sinh"></i>` 
+            ? ` <i class="fas fa-trash" style="color: #ff4444; cursor: pointer; margin-left: 10px;" onclick="deleteStudent('${student.firebaseId}', '${student.name}')" title="Xóa"></i>` 
             : '';
 
+        // Highlight dòng của chính mình
         const isMe = !isAdmin() && currentUser.phone === student.phone;
         const rowStyle = isMe ? 'background-color: #e3f2fd; border-left: 5px solid #0055A4;' : ''; 
         let dateInfo = student.lastAttendanceDate ? `<br><small style="color:blue">Ngày: ${student.lastAttendanceDate}</small>` : '';
@@ -229,17 +276,16 @@ function renderAttendanceTable() {
     });
 }
 
-// LƯU ĐIỂM DANH (Chỉ Admin)
+// Lưu điểm danh (Admin)
 window.saveDailyAttendance = async function() {
-    if(!isAdmin()) { alert("Bạn không có quyền thực hiện!"); return; }
-    if(!confirm("Lưu điểm danh hôm nay?")) return;
+    if(!isAdmin()) { alert("Chỉ HLV mới được lưu!"); return; }
+    if(!confirm("Lưu danh sách hôm nay?")) return;
 
     const clubStudents = students.filter(s => s.club === currentClub);
     const todayStr = new Date().toLocaleDateString('vi-VN');
     
-    // Gom dữ liệu gửi 1 lần (Batch Write)
     const batch = writeBatch(db);
-    let changeCount = 0;
+    let count = 0;
 
     clubStudents.forEach(student => {
         const statusEl = document.getElementById(`status-${student.firebaseId}`);
@@ -252,31 +298,28 @@ window.saveDailyAttendance = async function() {
                 note: noteEl.value.trim(),
                 lastAttendanceDate: todayStr
             });
-            changeCount++;
+            count++;
         }
     });
 
     try {
-        await batch.commit(); // Gửi lên mây
-        alert(`Đã lưu thành công cho ${changeCount} môn sinh!`);
+        await batch.commit();
+        alert(`Đã lưu điểm danh cho ${count} môn sinh!`);
     } catch (e) {
         console.error(e);
-        alert("Lỗi khi lưu: " + e.message);
+        alert("Lỗi: " + e.message);
     }
 }
 
-// Xóa môn sinh (Chỉ Admin)
+// Các hàm khác giữ nguyên (Xóa, Thêm, News, Profile...)
 window.deleteStudent = async function(firebaseId, studentName) {
     if(!isAdmin()) return;
-    if(confirm(`Xóa vĩnh viễn ${studentName}?`)) {
-        try {
-            await deleteDoc(doc(db, COLL_STUDENTS, firebaseId));
-            alert("Đã xóa!");
-        } catch (e) { alert("Lỗi: " + e.message); }
+    if(confirm(`Xóa môn sinh ${studentName}?`)) {
+        try { await deleteDoc(doc(db, COLL_STUDENTS, firebaseId)); alert("Đã xóa!"); } 
+        catch (e) { alert("Lỗi: " + e.message); }
     }
 }
 
-// Thêm môn sinh
 document.getElementById('add-student-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const name = document.getElementById('student-name').value;
@@ -284,10 +327,16 @@ document.getElementById('add-student-form').addEventListener('submit', async fun
     const dob = document.getElementById('student-dob').value;
     const imgInput = document.getElementById('student-img');
     
+    // Admin thêm thì không cần chặn trùng SĐT chéo CLB (vì Firestore tự sinh ID khác nhau)
+    // Nhưng nên chặn trùng trong CÙNG 1 CLB
+    if (students.some(s => s.phone === phone && s.club === currentClub)) {
+        alert("Môn sinh này đã có trong danh sách CLB này rồi!"); return;
+    }
+
     let imgUrl = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
     if (imgInput.files && imgInput.files[0]) {
         const file = imgInput.files[0];
-        if (file.size > 500 * 1024) { alert("Ảnh quá lớn (>500KB)!"); return; }
+        if (file.size > 500 * 1024) { alert("Ảnh quá lớn!"); return; }
         imgUrl = await readFileAsBase64(file);
     }
     
@@ -302,20 +351,21 @@ document.getElementById('add-student-form').addEventListener('submit', async fun
     window.switchTab('attendance');
 });
 
-// --- 8. PROFILE & NEWS (GIỮ NGUYÊN) ---
+// --- PHẦN PROFILE & NEWS (GIỮ NGUYÊN) ---
 window.showProfile = function() {
     if (!currentUser) return;
     window.showSection('profile');
     document.getElementById('profile-name').value = currentUser.name;
     document.getElementById('profile-phone').value = currentUser.phone;
     document.getElementById('profile-dob').value = currentUser.dob || "";
-    document.getElementById('profile-club').value = currentUser.club;
+    // Hiển thị danh sách CLB đang tham gia
+    document.getElementById('profile-club').value = (currentUser.clubs || [currentUser.club]).join(", ");
     document.getElementById('profile-img-preview').src = currentUser.img || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
     window.disableEditMode();
 }
 window.enableEditProfile = function() {
     document.getElementById('profile-name').disabled = false;
-    document.getElementById('profile-phone').disabled = false;
+    // SĐT không cho sửa để tránh lỗi đăng nhập
     document.getElementById('profile-dob').disabled = false;
     document.getElementById('btn-edit-profile').style.display = 'none';
     document.getElementById('btn-save-profile').style.display = 'block';
@@ -338,17 +388,24 @@ window.saveProfile = async function(e) {
     e.preventDefault();
     if (!currentUser || !confirm("Lưu thay đổi?")) return;
     const newName = document.getElementById('profile-name').value;
-    const newPhone = document.getElementById('profile-phone').value;
     const newDob = document.getElementById('profile-dob').value;
     const newImg = document.getElementById('profile-img-preview').src;
-    const student = students.find(s => s.phone === currentUser.phone);
-    if (student && student.firebaseId) {
-        const docRef = doc(db, COLL_STUDENTS, student.firebaseId);
-        await updateDoc(docRef, { name: newName, phone: newPhone, dob: newDob, img: newImg });
-        currentUser.name = newName; currentUser.phone = newPhone; currentUser.dob = newDob; currentUser.img = newImg;
+    
+    // Cập nhật TẤT CẢ các hồ sơ của người này trên các CLB khác nhau
+    const myRecords = students.filter(s => s.phone === currentUser.phone);
+    const batch = writeBatch(db);
+    
+    myRecords.forEach(rec => {
+        const docRef = doc(db, COLL_STUDENTS, rec.firebaseId);
+        batch.update(docRef, { name: newName, dob: newDob, img: newImg });
+    });
+
+    try {
+        await batch.commit();
+        currentUser.name = newName; currentUser.dob = newDob; currentUser.img = newImg;
         localStorage.setItem('vovinamCurrentUser', JSON.stringify(currentUser));
-        alert("Đã cập nhật!"); window.disableEditMode(); checkLoginStatus();
-    } else { alert("Lỗi dữ liệu!"); }
+        alert("Đã cập nhật hồ sơ!"); window.disableEditMode(); checkLoginStatus();
+    } catch(e) { alert("Lỗi: " + e.message); }
 }
 
 let currentViewingPostId = null; let editingFirebaseId = null; 
