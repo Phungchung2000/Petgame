@@ -1,6 +1,6 @@
 // --- 1. NHÚNG THƯ VIỆN FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, writeBatch, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // --- 2. CẤU HÌNH KẾT NỐI ---
 const firebaseConfig = {
@@ -19,14 +19,14 @@ const db = getFirestore(app);
 let currentClub = "";
 let students = [];
 let posts = [];
-let attendanceLogs = []; // Lưu danh sách các ngày đã điểm danh
+let attendanceLogs = []; 
 let currentUser = JSON.parse(localStorage.getItem('vovinamCurrentUser')); 
 let currentCalendarMonth = new Date().getMonth();
 let currentCalendarYear = new Date().getFullYear();
 
 const COLL_STUDENTS = "students";
 const COLL_POSTS = "posts";
-const COLL_HISTORY = "attendance_history"; // Collection mới lưu lịch sử
+const COLL_HISTORY = "attendance_history"; 
 
 // --- 4. LẮNG NGHE DỮ LIỆU ---
 onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
@@ -36,7 +36,6 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         data.firebaseId = doc.id; 
         students.push(data);
     });
-    // Security check
     if (currentUser && !isAdmin()) {
         const myRecords = students.filter(s => s.phone === currentUser.phone);
         if (myRecords.length === 0) {
@@ -44,7 +43,6 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         }
         currentUser.clubs = myRecords.map(s => s.club);
         localStorage.setItem('vovinamCurrentUser', JSON.stringify(currentUser));
-        
         if (currentClub && !currentUser.clubs.includes(currentClub)) {
             if(document.getElementById('club-manager').style.display === 'block') {
                 alert("Mất quyền truy cập."); window.showSection('home');
@@ -93,15 +91,13 @@ const readFileAsBase64 = (file) => {
 window.handleAdminClick = function() {
     if (isAdmin()) {
         window.showSection('admin-dashboard');
-        renderAdminCalendar(); // Vẽ lịch
+        renderAdminCalendar(); 
     } else {
         alert("Chức năng này chỉ dành cho Huấn Luyện Viên!");
     }
 }
 
-// --- 7. LOGIC LỊCH VÀ LỊCH SỬ (MỚI) ---
-
-// Tải lịch sử điểm danh từ Firestore
+// --- 7. LOGIC LỊCH & LỊCH SỬ ---
 async function fetchAttendanceHistory() {
     const q = query(collection(db, COLL_HISTORY));
     const snapshot = await getDocs(q);
@@ -113,10 +109,8 @@ async function fetchAttendanceHistory() {
     });
 }
 
-// Vẽ lịch
 window.renderAdminCalendar = async function() {
-    await fetchAttendanceHistory(); // Lấy dữ liệu mới nhất
-    
+    await fetchAttendanceHistory(); 
     const calendarBody = document.getElementById('calendar-body');
     const monthYearTitle = document.getElementById('calendar-month-year');
     calendarBody.innerHTML = "";
@@ -126,22 +120,17 @@ window.renderAdminCalendar = async function() {
     
     monthYearTitle.innerText = `Tháng ${currentCalendarMonth + 1}/${currentCalendarYear}`;
 
-    // Header ngày
     const daysOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
     daysOfWeek.forEach(day => {
         calendarBody.innerHTML += `<div class="calendar-day-name">${day}</div>`;
     });
 
-    // Ô trống đầu tháng
     for (let i = 0; i < firstDay; i++) {
         calendarBody.innerHTML += `<div></div>`;
     }
 
-    // Các ngày trong tháng
     for (let i = 1; i <= daysInMonth; i++) {
         const dateStr = `${i < 10 ? '0' + i : i}/${currentCalendarMonth + 1 < 10 ? '0' + (currentCalendarMonth + 1) : currentCalendarMonth + 1}/${currentCalendarYear}`;
-        
-        // Kiểm tra xem ngày này có dữ liệu không
         const hasData = attendanceLogs.some(log => log.date === dateStr);
         const className = hasData ? "calendar-day has-data" : "calendar-day";
         const todayClass = (new Date().getDate() === i && new Date().getMonth() === currentCalendarMonth && new Date().getFullYear() === currentCalendarYear) ? " today" : "";
@@ -163,16 +152,14 @@ window.changeMonth = function(step) {
     renderAdminCalendar();
 }
 
-// Hiển thị danh sách các CLB đã điểm danh trong ngày chọn
 window.showDailyRecords = function(dateStr) {
     document.getElementById('daily-records-section').style.display = 'block';
     document.getElementById('selected-date-title').innerText = `Dữ liệu ngày ${dateStr}`;
-    document.getElementById('record-detail-view').style.display = 'none'; // Ẩn chi tiết cũ
+    document.getElementById('record-detail-view').style.display = 'none';
 
     const listContainer = document.getElementById('club-records-list');
     listContainer.innerHTML = "";
 
-    // Lọc các bản ghi của ngày đó
     const records = attendanceLogs.filter(log => log.date === dateStr);
 
     records.forEach(log => {
@@ -188,7 +175,6 @@ window.showDailyRecords = function(dateStr) {
     });
 }
 
-// Xem chi tiết bảng điểm danh của 1 bản ghi
 window.viewLogDetail = function(logId) {
     const log = attendanceLogs.find(l => l.id === logId);
     if (!log) return;
@@ -210,7 +196,6 @@ window.viewLogDetail = function(logId) {
         `;
         tbody.appendChild(row);
     });
-    // Cuộn xuống xem chi tiết
     document.getElementById('record-detail-view').scrollIntoView({ behavior: "smooth" });
 }
 
@@ -224,12 +209,10 @@ window.saveDailyAttendance = async function() {
     if(!confirm("Lưu danh sách hôm nay?")) return;
 
     const clubStudents = students.filter(s => s.club === currentClub);
-    const todayStr = new Date().toLocaleDateString('vi-VN'); // dd/mm/yyyy
+    const todayStr = new Date().toLocaleDateString('vi-VN'); 
     
     const batch = writeBatch(db);
     let count = 0;
-    
-    // Mảng chứa chi tiết để lưu lịch sử
     let historyDetails = [];
 
     clubStudents.forEach(student => {
@@ -240,7 +223,6 @@ window.saveDailyAttendance = async function() {
             const isPresent = statusEl.checked;
             const note = noteEl.value.trim();
 
-            // 1. Cập nhật trạng thái hiện tại (để hiển thị ở bảng chính)
             const docRef = doc(db, COLL_STUDENTS, student.firebaseId);
             batch.update(docRef, {
                 isPresent: isPresent,
@@ -248,7 +230,6 @@ window.saveDailyAttendance = async function() {
                 lastAttendanceDate: todayStr
             });
 
-            // 2. Thêm vào mảng lịch sử
             historyDetails.push({
                 studentId: student.firebaseId,
                 name: student.name,
@@ -260,20 +241,14 @@ window.saveDailyAttendance = async function() {
     });
 
     try {
-        // Thực hiện Batch update
         await batch.commit();
-
-        // 3. LƯU LỊCH SỬ (Tạo Document mới trong collection attendance_history)
-        // Cấu trúc: { date: "18/01/2026", club: "Tên CLB", details: [...] }
         const historyRecord = {
             date: todayStr,
             club: currentClub,
             createdAt: Date.now(),
             details: historyDetails
         };
-        
         await addDoc(collection(db, COLL_HISTORY), historyRecord);
-
         alert(`Đã lưu điểm danh cho ${count} môn sinh!`);
     } catch (e) {
         console.error(e);
@@ -281,7 +256,7 @@ window.saveDailyAttendance = async function() {
     }
 }
 
-// --- CÁC PHẦN CÒN LẠI GIỮ NGUYÊN ---
+// --- CÁC PHẦN CÒN LẠI ---
 document.getElementById('register-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const name = document.getElementById('reg-name').value;
