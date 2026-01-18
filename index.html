@@ -180,6 +180,7 @@
                     <i class="fas fa-pen"></i> Đăng bài mới
                 </button>
             </div>
+
             <div id="post-creator" style="display: none;">
                 <h3>Soạn thảo bài viết</h3>
                 <input type="text" id="post-title" placeholder="Tiêu đề bài viết..." class="post-input">
@@ -195,24 +196,40 @@
                 <div id="post-content" class="post-editor" contenteditable="true"></div>
                 <button onclick="publishPost()" class="btn-submit">Đăng bài</button>
             </div>
+
             <div id="news-list-view">
                 <div id="news-feed"></div>
             </div>
+
             <div id="news-detail-view" style="display: none;">
-                <button onclick="backToNewsList()" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại danh sách</button>
+                <button onclick="backToNewsList()" class="btn-back-custom">
+                    <i class="fas fa-arrow-left"></i> Quay lại danh sách
+                </button>
+                
                 <div class="article-container">
                     <h1 id="detail-title">Tiêu đề bài viết</h1>
                     <small id="detail-date" style="color: #666;">Ngày đăng...</small>
                     <hr>
                     <div id="detail-content" class="article-content"></div>
                 </div>
+
                 <div class="comment-section">
                     <h3>Bình luận</h3>
                     <div id="comment-list"></div>
-                    <form id="comment-form" onsubmit="submitComment(event)">
-                        <input type="text" id="comment-input" placeholder="Viết bình luận của bạn..." required>
-                        <button type="submit" class="btn-comment"><i class="fas fa-paper-plane"></i> Gửi</button>
-                    </form>
+                    
+                    <div class="comment-input-wrapper">
+                        <div class="comment-toolbar">
+                            <button type="button" onclick="formatComment('bold')" title="In đậm"><b>B</b></button>
+                            <button type="button" onclick="formatComment('italic')" title="In nghiêng"><i>I</i></button>
+                            <button type="button" onclick="formatComment('underline')" title="Gạch chân"><u>U</u></button>
+                        </div>
+                        
+                        <div id="comment-input-rich" contenteditable="true" placeholder="Viết bình luận của bạn..."></div>
+                        
+                        <button onclick="submitComment()" class="btn-send-comment">
+                            <i class="fas fa-paper-plane"></i> Gửi bình luận
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -261,6 +278,20 @@
     </footer>
 
     <script type="module" src="script.js"></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
+      const firebaseConfig = {
+        apiKey: "AIzaSyDM1PfrkNlaXpqP_-ZgYmBjk_RPXZ_mr4Q",
+        authDomain: "vovinam-11606.firebaseapp.com",
+        projectId: "vovinam-11606",
+        storageBucket: "vovinam-11606.firebasestorage.app",
+        messagingSenderId: "531907871843",
+        appId: "1:531907871843:web:2e96b22d6fb8a45cee6456",
+        measurementId: "G-JKRNWXN4Z8"
+      };
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+    </script>
 </body>
 </html>
-
