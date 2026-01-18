@@ -11,7 +11,7 @@ body { background-color: var(--bg-light); color: var(--text-color); display: fle
 main { padding: 20px; max-width: 1200px; margin: 0 auto; flex: 1; width: 100%; }
 footer { background: #333; color: white; text-align: center; padding: 20px; margin-top: auto; width: 100%; }
 
-/* HEADER & MENU */
+/* HEADER */
 header { background-color: var(--vovinam-blue); color: white; padding: 10px 20px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 .header-content { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; flex-wrap: nowrap; }
 nav { flex: 1; text-align: center; }
@@ -30,7 +30,7 @@ nav ul li a:hover { color: var(--vovinam-yellow); }
 .dropdown-content li a:hover { background-color: #ddd; color: var(--vovinam-blue); }
 .dropdown:hover .dropdown-content { display: block; }
 
-/* AUTH & USER */
+/* AUTH */
 .auth-buttons { display: flex; gap: 10px; flex-shrink: 0; margin-left: 20px; }
 .btn-login { background: transparent; border: 1px solid white; color: white; padding: 5px 15px; border-radius: 4px; cursor: pointer; }
 .btn-register { background: var(--vovinam-yellow); border: none; color: #333; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -44,7 +44,7 @@ nav ul li a:hover { color: var(--vovinam-yellow); }
 .user-dropdown-content li a { color: #333; padding: 12px 16px; display: block; text-decoration: none; text-align: left; }
 .user-dropdown-content li a:hover { background-color: #f1f1f1; }
 
-/* GENERAL UI */
+/* LAYOUT */
 .banner { background: linear-gradient(rgba(0,85,164,0.8), rgba(0,85,164,0.8)), url('https://vovinam.vn/wp-content/uploads/2019/04/vovinam-banner.jpg'); background-size: cover; color: white; text-align: center; padding: 80px 20px; border-radius: 10px; margin-bottom: 30px; }
 .slider-container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
 .club-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 220px; text-align: center; cursor: pointer; border-bottom: 5px solid var(--vovinam-blue); }
@@ -61,7 +61,7 @@ nav ul li a:hover { color: var(--vovinam-yellow); }
 input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
 .btn-submit { background: var(--vovinam-blue); color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1rem; }
 
-/* ATTENDANCE & HISTORY TABLES */
+/* TABLES & HISTORY */
 .club-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
 .tab-btn { padding: 10px 20px; border: none; background: #ddd; cursor: pointer; border-radius: 5px 5px 0 0; }
 .tab-btn.active { background: var(--vovinam-blue); color: white; }
@@ -80,25 +80,17 @@ input:checked + .slider:before { transform: translateX(26px); }
 .btn-save-attendance { background-color: #28a745; color: white; padding: 12px 25px; border: none; border-radius: 30px; font-size: 1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.2s; }
 .btn-save-attendance:hover { background-color: #218838; transform: scale(1.05); }
 
-/* --- HISTORY PAGE STYLES (MỚI) --- */
-.history-controls {
-    display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
+/* HISTORY CONTROLS */
+.history-controls { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .control-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-.btn-refresh {
-    background-color: var(--vovinam-blue); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; height: 42px; font-weight: bold;
-}
-.status-badge {
-    padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 0.85rem; display: inline-block;
-}
+.btn-refresh { background-color: var(--vovinam-blue); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; height: 42px; font-weight: bold; }
+.status-badge { padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 0.85rem; display: inline-block; }
 .status-present { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
 .status-absent { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-.btn-edit-note {
-    background: none; border: none; color: #1976D2; cursor: pointer; font-size: 1.1rem;
-}
+.btn-edit-note { background: none; border: none; color: #1976D2; cursor: pointer; font-size: 1.1rem; }
 .btn-edit-note:hover { color: #0D47A1; }
 
-/* MODAL & EDIT */
+/* MODALS */
 .btn-edit-student { background-color: #FFC107; color: #333; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
 .btn-edit-student:hover { background-color: #FFB300; transform: scale(1.1); }
 .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); animation: fadeIn 0.3s; }
@@ -107,7 +99,7 @@ input:checked + .slider:before { transform: translateX(26px); }
 .close-modal:hover { color: black; }
 @keyframes fadeIn { from {opacity: 0} to {opacity: 1} }
 
-/* NEWS, PROFILE & OTHERS (GIỮ NGUYÊN) */
+/* NEWS & POSTS */
 #post-creator { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .post-editor { border: 1px solid #ccc; min-height: 250px; padding: 15px; border-radius: 4px; margin-bottom: 15px; background-color: #fff; color: #333; overflow-y: auto; font-size: 1rem; line-height: 1.5; }
 .post-editor:focus { outline: 2px solid var(--vovinam-blue); border-color: transparent; }
@@ -164,3 +156,7 @@ input:checked + .slider:before { transform: translateX(26px); }
 .btn-save { background: var(--vovinam-blue); color: white; flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
 input:disabled { background-color: #f9f9f9; color: #555; border: 1px dashed #ccc; }
 input:not(:disabled) { background-color: #fff; border: 1px solid var(--vovinam-blue); font-weight: bold; }
+.user-dropdown { position: relative; display: inline-block; }
+.btn-user-menu { background: transparent; border: 1px solid white; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+.btn-user-menu:hover { background: rgba(255,255,255,0.2); }
+.user-dropdown-content { right: 0; left: auto; min-width: 200px; }
