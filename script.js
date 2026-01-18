@@ -1,6 +1,6 @@
 // --- 1. NHÚNG THƯ VIỆN FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, writeBatch, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // --- 2. CẤU HÌNH KẾT NỐI ---
 const firebaseConfig = {
@@ -25,7 +25,6 @@ const COLL_STUDENTS = "students";
 const COLL_POSTS = "posts";
 
 // --- 4. LẮNG NGHE DỮ LIỆU ---
-// Tối ưu: Dùng onSnapshot nhưng kiểm tra kỹ dữ liệu để tránh render lại liên tục
 onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
     students = [];
     snapshot.forEach((doc) => {
@@ -34,22 +33,29 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         students.push(data);
     });
     
-    // Check bảo mật
+    // Check bảo mật & Cập nhật session
     if (currentUser && !isAdmin()) {
+        // Tìm tất cả hồ sơ của user này để cập nhật lại session (phòng trường hợp vừa sửa ảnh xong)
         const myRecords = students.filter(s => s.phone === currentUser.phone);
+        
         if (myRecords.length === 0) {
             alert("Tài khoản của bạn đã bị xóa khỏi hệ thống."); 
             window.logout(); 
             return;
         }
-        // Cập nhật lại session nếu bị sửa từ xa
+
+        // Cập nhật lại thông tin mới nhất vào session (Lấy từ bản ghi đầu tiên tìm thấy)
+        const latestInfo = myRecords[0];
+        currentUser.name = latestInfo.name;
+        currentUser.dob = latestInfo.dob;
+        currentUser.img = latestInfo.img; // <--- CẬP NHẬT ẢNH MỚI VÀO SESSION NGAY
         currentUser.clubs = myRecords.map(s => s.club);
+        
         localStorage.setItem('vovinamCurrentUser', JSON.stringify(currentUser));
         
-        // Nếu đang xem CLB mà bị kích -> đá ra
+        // Kiểm tra quyền truy cập CLB
         if (currentClub && !currentUser.clubs.includes(currentClub)) {
-            const managerSection = document.getElementById('club-manager');
-            if(managerSection && managerSection.style.display === 'block') {
+            if(document.getElementById('club-manager').style.display === 'block') {
                 alert(`Bạn không còn quyền truy cập CLB ${currentClub}.`);
                 window.showSection('home');
             }
@@ -57,10 +63,13 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         checkLoginStatus();
     }
 
-    // Chỉ render lại nếu đang mở bảng điểm danh
-    const managerSection = document.getElementById('club-manager');
-    if(managerSection && managerSection.style.display === 'block') {
+    // Render lại bảng nếu đang mở
+    if(document.getElementById('club-manager').style.display === 'block') {
         renderAttendanceTable();
+    }
+    // Cập nhật ảnh đại diện ở phần Profile nếu đang mở
+    if(document.getElementById('profile').style.display === 'block' && currentUser) {
+        document.getElementById('profile-img-preview').src = currentUser.img;
     }
 });
 
@@ -77,7 +86,7 @@ onSnapshot(qPosts, (snapshot) => {
 
 checkLoginStatus();
 
-// --- 5. HÀM HỖ TRỢ (GẮN WINDOW) ---
+// --- 5. HÀM HỖ TRỢ ---
 window.showSection = function(sectionId) {
     document.querySelectorAll('main > section').forEach(sec => sec.style.display = 'none');
     document.getElementById(sectionId).style.display = 'block';
@@ -98,7 +107,6 @@ const readFileAsBase64 = (file) => {
 }
 
 // --- 6. XỬ LÝ TÀI KHOẢN ---
-// Gắn sự kiện an toàn
 const regForm = document.getElementById('register-form');
 if(regForm) {
     regForm.addEventListener('submit', async function(e) {
@@ -110,13 +118,22 @@ if(regForm) {
 
         if (!club) { alert("Vui lòng chọn Câu Lạc Bộ!"); return; }
         
+        // Kiểm tra xem đã có ở CLB này chưa
         if (students.some(s => s.phone === phone && s.club === club)) { 
             alert(`Số điện thoại ${phone} đã đăng ký tại CLB ${club} rồi!`); return; 
         }
 
+        // --- LOGIC ĐỒNG BỘ: Nếu SĐT này đã có ở CLB khác, lấy ảnh cũ ---
+        let existingImg = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        const existingUser = students.find(s => s.phone === phone);
+        if (existingUser) {
+            existingImg = existingUser.img; // Dùng lại ảnh cũ
+        }
+        // -------------------------------------------------------------
+
         const newStudent = {
             id: Date.now(), club: club, name: name, phone: phone, dob: dob,
-            img: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            img: existingImg, // Dùng ảnh đồng bộ
             isPresent: false, note: "", lastAttendanceDate: ""
         };
 
@@ -144,7 +161,13 @@ if(loginForm) {
         const matchedRecords = students.filter(s => s.phone === phone && s.name.toLowerCase() === name.toLowerCase());
         if (matchedRecords.length > 0) {
             const myClubs = matchedRecords.map(s => s.club);
-            currentUser = { ...matchedRecords[0], clubs: myClubs, role: "student" };
+            // Lấy thông tin từ bản ghi mới nhất (để ảnh được cập nhật)
+            const latestInfo = matchedRecords[0]; 
+            currentUser = { 
+                ...latestInfo, 
+                clubs: myClubs, 
+                role: "student" 
+            };
             loginSuccess();
         } else { 
             alert("Thông tin không đúng hoặc chưa đăng ký!"); 
@@ -200,10 +223,8 @@ window.openClubManager = function(clubName) {
 
     currentClub = clubName;
     document.getElementById('current-club-title').innerText = `Danh sách: ${clubName}`;
-    
-    // Nút thêm môn sinh: Chỉ Admin thấy và SỬA LỖI HIỂN THỊ
     const btnAdd = document.getElementById('btn-add-student');
-    if (btnAdd) btnAdd.style.display = isAdmin() ? 'block' : 'none';
+    if (btnAdd) btnAdd.style.display = isAdmin() ? 'inline-block' : 'none';
 
     window.showSection('club-manager');
     window.switchTab('attendance');
@@ -213,16 +234,12 @@ window.switchTab = function(tabId) {
     document.getElementById('tab-attendance').style.display = 'none';
     document.getElementById('tab-add-student').style.display = 'none';
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    
     document.getElementById(`tab-${tabId}`).style.display = 'block';
     
     const actionDiv = document.getElementById('attendance-actions');
     if(tabId === 'attendance') {
-        document.querySelector('.tab-btn').classList.add('active'); // Mặc định nút đầu active
-        // Tìm nút theo text hoặc vị trí nếu không có ID
         const btns = document.querySelectorAll('.tab-btn');
         if(btns[0]) btns[0].classList.add('active');
-
         renderAttendanceTable();
         if(actionDiv) actionDiv.style.display = isAdmin() ? 'block' : 'none';
     } else {
@@ -247,6 +264,10 @@ function renderAttendanceTable() {
             ? `<label class="switch"><input type="checkbox" id="status-${student.firebaseId}" ${student.isPresent ? 'checked' : ''}><span class="slider"></span></label>`
             : (student.isPresent ? `<span style="color:green;font-weight:bold;">Có mặt</span>` : `<span style="color:red;font-weight:bold;">Vắng</span>`);
         
+        if (isAdmin()) {
+            statusHTML += ` <button type="button" class="btn-edit-student" title="Sửa thông tin" onclick="window.openEditModal('${student.firebaseId}')"><i class="fas fa-pen"></i></button>`;
+        }
+
         let noteHTML = isAdmin()
             ? `<input type="text" class="note-input" id="note-${student.firebaseId}" value="${student.note || ''}" placeholder="...">`
             : `<span>${student.note || ''}</span>`;
@@ -270,7 +291,7 @@ function renderAttendanceTable() {
                 <strong>${student.name}</strong> ${isMe ? '(Bạn)' : ''} ${deleteBtn}
                 ${infoDisplay} ${dateInfo}
             </td>
-            <td style="${rowStyle}">${statusHTML}</td>
+            <td style="${rowStyle}" style="white-space: nowrap;">${statusHTML}</td>
             <td style="${rowStyle}">${noteHTML}</td>
         `;
         tbody.appendChild(tr);
@@ -280,45 +301,33 @@ function renderAttendanceTable() {
 window.saveDailyAttendance = async function() {
     if(!isAdmin()) return;
     if(!confirm("Lưu điểm danh hôm nay?")) return;
-
     const clubStudents = students.filter(s => s.club === currentClub);
     const todayStr = new Date().toLocaleDateString('vi-VN');
     const batch = writeBatch(db);
     let count = 0;
-
     clubStudents.forEach(student => {
         const statusEl = document.getElementById(`status-${student.firebaseId}`);
         const noteEl = document.getElementById(`note-${student.firebaseId}`);
-
         if (statusEl && noteEl) {
             const docRef = doc(db, COLL_STUDENTS, student.firebaseId);
-            batch.update(docRef, {
-                isPresent: statusEl.checked,
-                note: noteEl.value.trim(),
-                lastAttendanceDate: todayStr
-            });
+            batch.update(docRef, { isPresent: statusEl.checked, note: noteEl.value.trim(), lastAttendanceDate: todayStr });
             count++;
         }
     });
-
-    try {
-        await batch.commit();
-        alert(`Đã lưu trạng thái cho ${count} môn sinh!`);
-    } catch (e) {
-        console.error(e);
-        alert("Lỗi: " + e.message);
-    }
+    try { await batch.commit(); alert(`Đã lưu ${count} môn sinh!`); } catch (e) { alert("Lỗi: " + e.message); }
 }
 
 window.deleteStudent = async function(firebaseId, studentName) {
     if(!isAdmin()) return;
-    if(confirm(`Xóa vĩnh viễn ${studentName}?`)) {
+    // Chặn xóa nếu là môn sinh thật (để tránh mất data đồng bộ)
+    // Ở đây ta cứ cho xóa, nhưng cảnh báo
+    if(confirm(`Cảnh báo: Xóa ${studentName} khỏi CLB này? Dữ liệu ở các CLB khác vẫn còn.`)) {
         try { await deleteDoc(doc(db, COLL_STUDENTS, firebaseId)); alert("Đã xóa!"); } 
         catch (e) { alert("Lỗi: " + e.message); }
     }
 }
 
-// XỬ LÝ FORM THÊM MÔN SINH (ĐÃ SỬA LỖI TỐC ĐỘ ẢNH)
+// Xử lý thêm sinh viên (Tự động đồng bộ ảnh)
 const addForm = document.getElementById('add-student-form');
 if(addForm) {
     addForm.addEventListener('submit', async function(e) {
@@ -333,9 +342,17 @@ if(addForm) {
         }
 
         let imgUrl = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        
+        // --- LOGIC ĐỒNG BỘ ẢNH ---
+        // Kiểm tra xem SĐT này đã có ảnh ở CLB nào chưa
+        const existingStudent = students.find(s => s.phone === phone);
+        if (existingStudent && existingStudent.img) {
+            imgUrl = existingStudent.img; // Dùng lại ảnh cũ
+        }
+        // -------------------------
+
         if (imgInput.files && imgInput.files[0]) {
-            // GIỚI HẠN DUNG LƯỢNG 100KB ĐỂ WEB KHÔNG BỊ LAG
-            if (imgInput.files[0].size > 100 * 1024) { alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 100KB để web chạy nhanh."); return; }
+            if (imgInput.files[0].size > 100 * 1024) { alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 100KB."); return; }
             imgUrl = await readFileAsBase64(imgInput.files[0]);
         }
         
@@ -351,7 +368,7 @@ if(addForm) {
     });
 }
 
-// --- PROFILE & NEWS ---
+// --- PROFILE & EDIT MODALS ---
 window.showProfile = function() {
     if (!currentUser) return;
     window.showSection('profile');
@@ -384,26 +401,88 @@ window.previewProfileAvatar = function(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+
+// --- HÀM LƯU HỒ SƠ (CÓ ĐỒNG BỘ HÓA TOÀN BỘ) ---
 window.saveProfile = async function() {
-    if (!currentUser || !confirm("Lưu thay đổi hồ sơ?")) return;
+    if (!currentUser || !confirm("Lưu thay đổi và cập nhật tất cả hồ sơ?")) return;
     const newName = document.getElementById('profile-name').value;
     const newDob = document.getElementById('profile-dob').value;
     const newImg = document.getElementById('profile-img-preview').src;
     
+    // 1. Tìm TẤT CẢ các bản ghi của SĐT này (ở mọi CLB)
     const myRecords = students.filter(s => s.phone === currentUser.phone);
+    
+    // 2. Dùng Batch để update một lần cho nhanh và đồng bộ
     const batch = writeBatch(db);
     myRecords.forEach(rec => {
         const docRef = doc(db, COLL_STUDENTS, rec.firebaseId);
-        batch.update(docRef, { name: newName, dob: newDob, img: newImg });
+        batch.update(docRef, { 
+            name: newName, 
+            dob: newDob, 
+            img: newImg 
+        });
     });
+
     try {
         await batch.commit();
-        currentUser.name = newName; currentUser.dob = newDob; currentUser.img = newImg;
-        localStorage.setItem('vovinamCurrentUser', JSON.stringify(currentUser));
-        alert("Đã cập nhật hồ sơ!"); window.disableEditMode(); checkLoginStatus();
+        alert("Đã cập nhật hồ sơ đồng bộ cho tất cả CLB!"); 
+        window.disableEditMode(); 
     } catch(e) { alert("Lỗi: " + e.message); }
 }
 
+// --- HLV EDIT MODAL (CŨNG PHẢI ĐỒNG BỘ) ---
+window.openEditModal = function(firebaseId) {
+    const student = students.find(s => s.firebaseId === firebaseId);
+    if (!student) return;
+    document.getElementById('edit-id').value = firebaseId;
+    document.getElementById('edit-name').value = student.name;
+    document.getElementById('edit-phone').value = student.phone; // Hidden phone logic can be applied if needed
+    document.getElementById('edit-dob').value = student.dob;
+    document.getElementById('edit-img-preview').src = student.img;
+    document.getElementById('edit-img-upload').value = "";
+    document.getElementById('modal-edit-student').style.display = 'block';
+}
+window.closeEditModal = function() { document.getElementById('modal-edit-student').style.display = 'none'; }
+window.previewEditAvatar = function(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('edit-img-preview').src = e.target.result; }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+window.saveStudentEdits = async function(e) {
+    e.preventDefault();
+    if(!isAdmin()) return;
+    const id = document.getElementById('edit-id').value;
+    const name = document.getElementById('edit-name').value;
+    const phone = document.getElementById('edit-phone').value; // SĐT gốc để tìm các bản ghi khác
+    const dob = document.getElementById('edit-dob').value;
+    let imgUrl = document.getElementById('edit-img-preview').src;
+    const imgInput = document.getElementById('edit-img-upload');
+
+    if (imgInput.files && imgInput.files[0]) {
+        if (imgInput.files[0].size > 500 * 1024) { alert("Ảnh quá lớn!"); return; }
+        imgUrl = await readFileAsBase64(imgInput.files[0]);
+    }
+
+    try {
+        // --- LOGIC ĐỒNG BỘ: Cập nhật TẤT CẢ môn sinh có cùng SĐT này ---
+        const relatedRecords = students.filter(s => s.phone === phone);
+        const batch = writeBatch(db);
+        
+        relatedRecords.forEach(rec => {
+            const docRef = doc(db, COLL_STUDENTS, rec.firebaseId);
+            // Lưu ý: Nếu muốn sửa SĐT thì logic sẽ phức tạp hơn, ở đây ta giả định SĐT là khóa chính để liên kết
+            batch.update(docRef, { name: name, dob: dob, img: imgUrl });
+        });
+
+        await batch.commit();
+        alert("Đã cập nhật thông tin đồng bộ!");
+        window.closeEditModal();
+    } catch (error) { alert("Lỗi: " + error.message); }
+}
+
+// --- NEWS LOGIC ---
 let currentViewingPostId = null; let editingFirebaseId = null; 
 window.togglePostForm = function(isEditMode = false) { const form = document.getElementById('post-creator'); const submitBtn = form.querySelector('.btn-submit'); if (form.style.display === 'none') { form.style.display = 'block'; if (!isEditMode) { document.getElementById('post-title').value = ""; document.getElementById('post-content').innerHTML = ""; editingFirebaseId = null; if(submitBtn) submitBtn.innerText = "Đăng bài"; } } else if (!isEditMode) { form.style.display = 'none'; } }
 window.handleMediaUpload = function(input) { const file = input.files[0]; if (!file || file.size > 2*1024*1024) { alert("File quá lớn!"); return; } const reader = new FileReader(); reader.onload = function(e) { const mediaHTML = file.type.startsWith('video') ? `<br><video controls src="${e.target.result}"></video><br>` : `<br><img src="${e.target.result}"><br>`; document.getElementById('post-content').innerHTML += mediaHTML; input.value = ""; }; reader.readAsDataURL(file); }
