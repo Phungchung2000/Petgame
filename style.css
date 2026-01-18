@@ -103,25 +103,7 @@ input:checked + .slider:before { transform: translateX(26px); }
 .btn-save { background: var(--vovinam-blue); color: white; flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
 input:disabled { background-color: #f9f9f9; color: #555; border: 1px dashed #ccc; }
 input:not(:disabled) { background-color: #fff; border: 1px solid var(--vovinam-blue); font-weight: bold; }
-
-/* --- CSS ADMIN DASHBOARD (MỚI) --- */
-.calendar-wrapper { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
-.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.calendar-header h3 { margin: 0; color: var(--vovinam-blue); }
-.calendar-header button { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #555; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
-.calendar-day-name { font-weight: bold; color: #888; font-size: 0.9rem; padding-bottom: 10px; }
-.calendar-day { padding: 10px; border-radius: 50%; cursor: pointer; transition: 0.2s; position: relative; }
-.calendar-day:hover { background-color: #eee; }
-.calendar-day.today { border: 2px solid var(--vovinam-blue); font-weight: bold; }
-.calendar-day.has-data { background-color: var(--vovinam-yellow); color: black; font-weight: bold; }
-.calendar-day.has-data:hover { background-color: #ffcc00; }
-.calendar-day.selected { background-color: var(--vovinam-blue); color: white; }
-
-.records-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-.record-card { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid var(--vovinam-blue); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-.record-card h4 { margin-top: 0; }
-.btn-view-detail { background: var(--vovinam-blue); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 10px; font-size: 0.9rem; }
-.detail-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.detail-table th, .detail-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-.detail-table th { background-color: #f2f2f2; }
+.user-dropdown { position: relative; display: inline-block; }
+.btn-user-menu { background: transparent; border: 1px solid white; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+.btn-user-menu:hover { background: rgba(255,255,255,0.2); }
+.user-dropdown-content { right: 0; left: auto; min-width: 200px; }
