@@ -16,10 +16,11 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // --- 3. BIẾN TOÀN CỤC ---
-let currentClub = "";
-let students = [];
-let posts = [];
-let currentUser = JSON.parse(localStorage.getItem('vovinamCurrentUser')); 
+// Gắn vào window để tránh mất biến
+window.currentClub = "";
+window.students = [];
+window.posts = [];
+window.currentUser = JSON.parse(localStorage.getItem('vovinamCurrentUser')); 
 
 const COLL_STUDENTS = "students";
 const COLL_POSTS = "posts";
@@ -27,25 +28,24 @@ const COLL_HISTORY = "attendance_logs";
 
 // --- 4. LẮNG NGHE DỮ LIỆU ---
 onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
-    students = [];
+    window.students = [];
     snapshot.forEach((doc) => {
         let data = doc.data();
         data.firebaseId = doc.id; 
-        students.push(data);
+        window.students.push(data);
     });
     
-    // Cập nhật session nếu có thay đổi
-    if (currentUser && !isAdmin()) {
-        const myRecords = students.filter(s => s.phone === currentUser.phone);
+    if (window.currentUser && !isAdmin()) {
+        const myRecords = window.students.filter(s => s.phone === window.currentUser.phone);
         if (myRecords.length === 0) {
             alert("Tài khoản của bạn đã bị xóa."); logout(); return;
         }
         const latest = myRecords[0];
-        currentUser.name = latest.name;
-        currentUser.dob = latest.dob;
-        currentUser.img = latest.img;
-        currentUser.clubs = myRecords.map(s => s.club);
-        localStorage.setItem('vovinamCurrentUser', JSON.stringify(currentUser));
+        window.currentUser.name = latest.name;
+        window.currentUser.dob = latest.dob;
+        window.currentUser.img = latest.img;
+        window.currentUser.clubs = myRecords.map(s => s.club);
+        localStorage.setItem('vovinamCurrentUser', JSON.stringify(window.currentUser));
         
         checkLoginStatus();
     }
@@ -57,24 +57,25 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
 
 const qPosts = query(collection(db, COLL_POSTS), orderBy("id", "desc")); 
 onSnapshot(qPosts, (snapshot) => {
-    posts = [];
+    window.posts = [];
     snapshot.forEach((doc) => {
         let data = doc.data();
         data.firebaseId = doc.id;
-        posts.push(data);
+        window.posts.push(data);
     });
     renderNews(); 
 });
 
-// --- CÁC HÀM XỬ LÝ (LOGIC CHÍNH) ---
+// --- 5. HÀM HỖ TRỢ (GẮN WINDOW ĐỂ NÚT BẤM HOẠT ĐỘNG) ---
 
+// Khai báo hàm bình thường, sau đó gắn vào window ở cuối file (hoặc trực tiếp)
 function showSection(sectionId) {
     document.querySelectorAll('main > section').forEach(sec => sec.style.display = 'none');
     document.getElementById(sectionId).style.display = 'block';
     window.scrollTo(0, 0);
 }
 
-function isAdmin() { return currentUser && currentUser.phone === '000'; }
+function isAdmin() { return window.currentUser && window.currentUser.phone === '000'; }
 function formatDoc(cmd, value = null) { document.execCommand(cmd, false, value); }
 function formatComment(cmd) { document.execCommand(cmd, false, null); document.getElementById('comment-input-rich').focus(); }
 
@@ -92,17 +93,14 @@ function openHistorySection() {
     showSection('history-section');
     const title = document.getElementById('history-title');
     const filters = document.getElementById('history-filters');
-    const actionHeader = document.getElementById('history-action-header');
-
+    
     if (isAdmin()) {
         title.innerText = "QUẢN TRỊ ĐIỂM DANH";
         filters.style.display = "flex";
-        if(actionHeader) actionHeader.style.display = "table-cell";
         document.getElementById('history-date-picker').valueAsDate = new Date();
     } else {
         title.innerText = "LỊCH SỬ ĐIỂM DANH CÁ NHÂN";
         filters.style.display = "none";
-        if(actionHeader) actionHeader.style.display = "none";
     }
     loadHistoryData();
 }
@@ -130,15 +128,12 @@ async function loadHistoryData() {
             
             if (!snapshot.empty) {
                 const logData = snapshot.docs[0].data();
-                const logId = snapshot.docs[0].id;
-                logData.records.forEach((rec, idx) => {
+                logData.records.forEach(rec => {
                     historyRecords.push({
                         date: logData.date,
                         name: rec.name,
                         status: rec.status,
-                        note: rec.note,
-                        logId: logId, 
-                        recordIndex: idx
+                        note: rec.note
                     });
                 });
             }
@@ -146,7 +141,7 @@ async function loadHistoryData() {
             const snapshot = await getDocs(collection(db, COLL_HISTORY));
             snapshot.forEach(doc => {
                 const logData = doc.data();
-                const myRecord = logData.records.find(r => r.phone === currentUser.phone);
+                const myRecord = logData.records.find(r => r.phone === window.currentUser.phone);
                 if (myRecord) {
                     historyRecords.push({
                         date: logData.date,
@@ -173,13 +168,7 @@ async function loadHistoryData() {
             const tr = document.createElement('tr');
             const statusClass = rec.status === "Có mặt" ? "status-present" : "status-absent";
             const statusBadge = `<span class="status-badge ${statusClass}">${rec.status}</span>`;
-            
-            tr.innerHTML = `
-                <td>${rec.date}</td>
-                <td><strong>${rec.name}</strong></td>
-                <td>${statusBadge}</td>
-                <td>${rec.note || ''}</td>
-            `;
+            tr.innerHTML = `<td>${rec.date}</td><td><strong>${rec.name}</strong></td><td>${statusBadge}</td><td>${rec.note || ''}</td>`;
             list.appendChild(tr);
         });
 
@@ -190,13 +179,13 @@ async function loadHistoryData() {
     }
 }
 
-// -- CLUB MANAGER --
+// -- QUẢN LÝ CLB --
 function openClubManager(clubName) {
-    if (!currentUser) { alert("Vui lòng đăng nhập!"); showSection('login'); return; }
-    if (!isAdmin() && (!currentUser.clubs || !currentUser.clubs.includes(clubName))) { 
+    if (!window.currentUser) { alert("Vui lòng đăng nhập!"); showSection('login'); return; }
+    if (!isAdmin() && (!window.currentUser.clubs || !window.currentUser.clubs.includes(clubName))) { 
         alert(`Bạn không có quyền xem CLB này!`); return; 
     }
-    currentClub = clubName;
+    window.currentClub = clubName;
     document.getElementById('current-club-title').innerText = `Danh sách: ${clubName}`;
     const btnAdd = document.getElementById('btn-add-student');
     if (btnAdd) btnAdd.style.display = isAdmin() ? 'inline-block' : 'none';
@@ -227,7 +216,7 @@ function switchTab(tabId) {
 function renderAttendanceTable() {
     const tbody = document.getElementById('attendance-list');
     tbody.innerHTML = "";
-    const clubStudents = students.filter(s => s.club === currentClub);
+    const clubStudents = window.students.filter(s => s.club === window.currentClub);
 
     if (clubStudents.length === 0) { 
         document.getElementById('empty-list-msg').style.display = 'block'; 
@@ -272,7 +261,7 @@ async function saveDailyAttendance() {
     if(!isAdmin()) return;
     if(!confirm("Lưu điểm danh hôm nay?")) return;
 
-    const clubStudents = students.filter(s => s.club === currentClub);
+    const clubStudents = window.students.filter(s => s.club === window.currentClub);
     const todayStr = new Date().toLocaleDateString('vi-VN');
     const batch = writeBatch(db);
     let historyRecords = [];
@@ -302,10 +291,10 @@ async function saveDailyAttendance() {
         await batch.commit();
         
         const safeDateId = todayStr.replace(/\//g, '-'); 
-        const logDocId = `${safeDateId}_${currentClub}`;
+        const logDocId = `${safeDateId}_${window.currentClub}`;
         const logData = {
             date: todayStr,
-            club: currentClub,
+            club: window.currentClub,
             timestamp: Date.now(),
             records: historyRecords
         };
@@ -325,13 +314,13 @@ async function deleteStudent(firebaseId, studentName) {
 
 // -- PROFILE --
 function showProfile() {
-    if (!currentUser) return;
+    if (!window.currentUser) return;
     showSection('profile');
-    document.getElementById('profile-name').value = currentUser.name;
-    document.getElementById('profile-phone').value = currentUser.phone;
-    document.getElementById('profile-dob').value = currentUser.dob;
-    document.getElementById('profile-club').value = (currentUser.clubs || []).join(", ");
-    document.getElementById('profile-img-preview').src = currentUser.img || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+    document.getElementById('profile-name').value = window.currentUser.name;
+    document.getElementById('profile-phone').value = window.currentUser.phone;
+    document.getElementById('profile-dob').value = window.currentUser.dob;
+    document.getElementById('profile-club').value = (window.currentUser.clubs || []).join(", ");
+    document.getElementById('profile-img-preview').src = window.currentUser.img || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
     enableEditProfile(false);
 }
 
@@ -354,12 +343,12 @@ function previewProfileAvatar(input) {
 }
 
 async function saveProfile() {
-    if (!currentUser || !confirm("Lưu thay đổi?")) return;
+    if (!window.currentUser || !confirm("Lưu thay đổi?")) return;
     const newName = document.getElementById('profile-name').value;
     const newDob = document.getElementById('profile-dob').value;
     const newImg = document.getElementById('profile-img-preview').src;
     
-    const myRecords = students.filter(s => s.phone === currentUser.phone);
+    const myRecords = window.students.filter(s => s.phone === window.currentUser.phone);
     const batch = writeBatch(db);
     myRecords.forEach(rec => {
         const docRef = doc(db, COLL_STUDENTS, rec.firebaseId);
@@ -368,14 +357,14 @@ async function saveProfile() {
 
     try {
         await batch.commit();
-        currentUser.name = newName; currentUser.dob = newDob; currentUser.img = newImg;
-        localStorage.setItem('vovinamCurrentUser', JSON.stringify(currentUser));
+        window.currentUser.name = newName; window.currentUser.dob = newDob; window.currentUser.img = newImg;
+        localStorage.setItem('vovinamCurrentUser', JSON.stringify(window.currentUser));
         alert("Đã cập nhật!"); enableEditProfile(false); checkLoginStatus();
     } catch(e) { alert("Lỗi: " + e.message); }
 }
 
 function openEditModal(firebaseId) {
-    const student = students.find(s => s.firebaseId === firebaseId);
+    const student = window.students.find(s => s.firebaseId === firebaseId);
     if (!student) return;
     document.getElementById('edit-id').value = firebaseId;
     document.getElementById('edit-name').value = student.name;
@@ -412,7 +401,7 @@ async function saveStudentEdits(e) {
     }
 
     try {
-        const relatedRecords = students.filter(s => s.phone === phone);
+        const relatedRecords = window.students.filter(s => s.phone === phone);
         const batch = writeBatch(db);
         
         if(relatedRecords.length > 0) {
@@ -482,7 +471,7 @@ async function deletePost(firebaseId) {
 }
 
 function editPost(firebaseId) { 
-    const post = posts.find(p => p.firebaseId === firebaseId); 
+    const post = window.posts.find(p => p.firebaseId === firebaseId); 
     if (!post) return; 
     togglePostForm(true); 
     document.getElementById('post-title').value = post.title; 
@@ -496,7 +485,7 @@ function renderNews() {
     const list = document.getElementById('news-feed'); list.innerHTML = ""; 
     const btnCreate = document.getElementById('btn-create-post'); 
     if(btnCreate) btnCreate.style.display = isAdmin() ? 'block' : 'none'; 
-    posts.forEach(post => { 
+    window.posts.forEach(post => { 
         const div = document.createElement('div'); div.className = 'news-item'; 
         let adminActions = isAdmin() ? `<div class="admin-actions"><button class="btn-edit-post" onclick="window.editPost('${post.firebaseId}')"><i class="fas fa-edit"></i> Sửa</button><button class="btn-delete-post" onclick="window.deletePost('${post.firebaseId}')"><i class="fas fa-trash-alt"></i> Xóa</button></div>` : ""; 
         div.innerHTML = `<h3>${post.title}</h3><small style="color:#666;">${post.date}</small><div class="news-preview">${post.content}</div><div class="read-more-btn" onclick="window.viewPost('${post.firebaseId}')">Xem & Bình luận >></div>${adminActions}`; 
@@ -505,7 +494,7 @@ function renderNews() {
 }
 
 function viewPost(firebaseId) { 
-    const post = posts.find(p => p.firebaseId === firebaseId); 
+    const post = window.posts.find(p => p.firebaseId === firebaseId); 
     if (!post) return; 
     currentViewingPostId = firebaseId; 
     document.getElementById('news-list-view').style.display = 'none'; 
@@ -540,12 +529,12 @@ function renderComments(post) {
 }
 
 async function submitComment() { 
-    if (!currentUser) { alert("Vui lòng đăng nhập!"); showSection('login'); return; } 
+    if (!window.currentUser) { alert("Vui lòng đăng nhập!"); showSection('login'); return; } 
     const content = document.getElementById('comment-input-rich').innerHTML.trim(); 
     if (!content) return; 
-    const post = posts.find(p => p.firebaseId === currentViewingPostId); 
+    const post = window.posts.find(p => p.firebaseId === currentViewingPostId); 
     if (!post) return; 
-    const newComment = { userId: currentUser.phone, userName: currentUser.name, text: content, date: new Date().toLocaleString(), isAdminComment: isAdmin() }; 
+    const newComment = { userId: window.currentUser.phone, userName: window.currentUser.name, text: content, date: new Date().toLocaleString(), isAdminComment: isAdmin() }; 
     let updatedComments = post.comments || []; updatedComments.push(newComment); 
     await updateDoc(doc(db, COLL_POSTS, currentViewingPostId), { comments: updatedComments }); 
     document.getElementById('comment-input-rich').innerHTML = ""; 
@@ -553,13 +542,12 @@ async function submitComment() {
 
 async function deleteComment(firebaseId, commentIndex) { 
     if (!confirm("Xóa bình luận?")) return; 
-    const post = posts.find(p => p.firebaseId === firebaseId); if(!post) return; 
+    const post = window.posts.find(p => p.firebaseId === firebaseId); if(!post) return; 
     let updatedComments = post.comments.filter((_, idx) => idx !== commentIndex); 
     await updateDoc(doc(db, COLL_POSTS, firebaseId), { comments: updatedComments }); 
 }
 
-// --- !!! PHẦN QUAN TRỌNG NHẤT: ĐƯA HÀM RA WINDOW !!! ---
-// Đây là "chìa khóa" để sửa lỗi nút liệt
+// --- GẮN HÀM VÀO WINDOW (ĐỂ HTML GỌI ĐƯỢC) ---
 window.showSection = showSection;
 window.loginSuccess = loginSuccess;
 window.logout = logout;
@@ -593,11 +581,21 @@ window.loadHistoryData = loadHistoryData;
 const regFormFinal = document.getElementById('register-form');
 if (regFormFinal) {
     regFormFinal.addEventListener('submit', async function(e) {
-        // (Logic đăng ký ở đây)
-        // Lưu ý: Đã viết logic đăng ký ở trên, ở đây chỉ để minh họa
-        // Nếu đã có addEventListener ở trên thì không cần viết lại.
-        // Chỉ cần đảm bảo window.xxxx được gán là xong.
+        // (Logic đăng ký ở đây - Giữ lại như cũ)
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const dob = document.getElementById('reg-dob').value;
+        const club = document.getElementById('reg-club').value;
+        if (!club) { alert("Vui lòng chọn Câu Lạc Bộ!"); return; }
+        if (window.students.some(s => s.phone === phone && s.club === club)) { alert(`Số điện thoại này đã có ở CLB ${club}!`); return; }
+        let existingImg = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        const existingUser = window.students.find(s => s.phone === phone);
+        if (existingUser) existingImg = existingUser.img;
+        const newStudent = { id: Date.now(), club: club, name: name, phone: phone, dob: dob, img: existingImg, isPresent: false, note: "", lastAttendanceDate: "" };
+        try { await addDoc(collection(db, COLL_STUDENTS), newStudent); alert("Đăng ký thành công!"); document.getElementById('register-form').reset(); window.showSection('login'); } catch (error) { alert("Lỗi: " + error.message); }
     });
 }
+
 checkLoginStatus();
 console.log("✅ SYSTEM LOADED & ATTACHED TO WINDOW");
