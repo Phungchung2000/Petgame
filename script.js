@@ -25,6 +25,7 @@ const COLL_STUDENTS = "students";
 const COLL_POSTS = "posts";
 
 // --- 4. LẮNG NGHE DỮ LIỆU ---
+// Tối ưu: Dùng onSnapshot nhưng kiểm tra kỹ dữ liệu để tránh render lại liên tục
 onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
     students = [];
     snapshot.forEach((doc) => {
@@ -32,6 +33,8 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         data.firebaseId = doc.id; 
         students.push(data);
     });
+    
+    // Check bảo mật
     if (currentUser && !isAdmin()) {
         const myRecords = students.filter(s => s.phone === currentUser.phone);
         if (myRecords.length === 0) {
@@ -39,11 +42,14 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
             window.logout(); 
             return;
         }
+        // Cập nhật lại session nếu bị sửa từ xa
         currentUser.clubs = myRecords.map(s => s.club);
         localStorage.setItem('vovinamCurrentUser', JSON.stringify(currentUser));
         
+        // Nếu đang xem CLB mà bị kích -> đá ra
         if (currentClub && !currentUser.clubs.includes(currentClub)) {
-            if(document.getElementById('club-manager').style.display === 'block') {
+            const managerSection = document.getElementById('club-manager');
+            if(managerSection && managerSection.style.display === 'block') {
                 alert(`Bạn không còn quyền truy cập CLB ${currentClub}.`);
                 window.showSection('home');
             }
@@ -51,7 +57,9 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         checkLoginStatus();
     }
 
-    if(document.getElementById('club-manager').style.display === 'block') {
+    // Chỉ render lại nếu đang mở bảng điểm danh
+    const managerSection = document.getElementById('club-manager');
+    if(managerSection && managerSection.style.display === 'block') {
         renderAttendanceTable();
     }
 });
@@ -69,7 +77,7 @@ onSnapshot(qPosts, (snapshot) => {
 
 checkLoginStatus();
 
-// --- 5. HÀM HỖ TRỢ (SAFE MODE) ---
+// --- 5. HÀM HỖ TRỢ (GẮN WINDOW) ---
 window.showSection = function(sectionId) {
     document.querySelectorAll('main > section').forEach(sec => sec.style.display = 'none');
     document.getElementById(sectionId).style.display = 'block';
@@ -90,10 +98,10 @@ const readFileAsBase64 = (file) => {
 }
 
 // --- 6. XỬ LÝ TÀI KHOẢN ---
-// Gắn sự kiện an toàn (Kiểm tra phần tử tồn tại trước)
-const registerForm = document.getElementById('register-form');
-if (registerForm) {
-    registerForm.addEventListener('submit', async function(e) {
+// Gắn sự kiện an toàn
+const regForm = document.getElementById('register-form');
+if(regForm) {
+    regForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const name = document.getElementById('reg-name').value.trim();
         const phone = document.getElementById('reg-phone').value.trim();
@@ -122,7 +130,7 @@ if (registerForm) {
 }
 
 const loginForm = document.getElementById('login-form');
-if (loginForm) {
+if(loginForm) {
     loginForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const name = document.getElementById('login-name').value.trim();
@@ -192,39 +200,35 @@ window.openClubManager = function(clubName) {
 
     currentClub = clubName;
     document.getElementById('current-club-title').innerText = `Danh sách: ${clubName}`;
+    
+    // Nút thêm môn sinh: Chỉ Admin thấy và SỬA LỖI HIỂN THỊ
     const btnAdd = document.getElementById('btn-add-student');
-    if (btnAdd) btnAdd.style.display = isAdmin() ? 'inline-block' : 'none'; // Sửa display thành inline-block để không vỡ layout flex
+    if (btnAdd) btnAdd.style.display = isAdmin() ? 'block' : 'none';
 
     window.showSection('club-manager');
     window.switchTab('attendance');
 }
 
 window.switchTab = function(tabId) {
-    // Ẩn tất cả tab content
     document.getElementById('tab-attendance').style.display = 'none';
     document.getElementById('tab-add-student').style.display = 'none';
-    
-    // Bỏ active tất cả nút
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     
-    // Hiện tab content được chọn
     document.getElementById(`tab-${tabId}`).style.display = 'block';
     
-    // Highlight nút tương ứng
-    if (tabId === 'attendance') {
-        const btnAtt = document.getElementById('btn-tab-attendance');
-        if (btnAtt) btnAtt.classList.add('active');
-        
-        // Hiện nút Lưu điểm danh (Chỉ Admin)
-        const actionDiv = document.getElementById('attendance-actions');
-        if (actionDiv) actionDiv.style.display = isAdmin() ? 'block' : 'none';
+    const actionDiv = document.getElementById('attendance-actions');
+    if(tabId === 'attendance') {
+        document.querySelector('.tab-btn').classList.add('active'); // Mặc định nút đầu active
+        // Tìm nút theo text hoặc vị trí nếu không có ID
+        const btns = document.querySelectorAll('.tab-btn');
+        if(btns[0]) btns[0].classList.add('active');
+
+        renderAttendanceTable();
+        if(actionDiv) actionDiv.style.display = isAdmin() ? 'block' : 'none';
     } else {
         const btnAdd = document.getElementById('btn-add-student');
-        if (btnAdd) btnAdd.classList.add('active');
-        
-        // Ẩn nút Lưu điểm danh
-        const actionDiv = document.getElementById('attendance-actions');
-        if (actionDiv) actionDiv.style.display = 'none';
+        if(btnAdd) btnAdd.classList.add('active');
+        if(actionDiv) actionDiv.style.display = 'none';
     }
 }
 
@@ -255,12 +259,9 @@ function renderAttendanceTable() {
         const rowStyle = isMe ? 'background-color: #e3f2fd; border-left: 5px solid #0055A4;' : ''; 
         let dateInfo = student.lastAttendanceDate ? `<br><small style="color:blue">Cập nhật: ${student.lastAttendanceDate}</small>` : '';
 
-        let infoDisplay = "";
-        if (isAdmin()) {
-            infoDisplay = `<br><small><i class="fas fa-phone"></i> ${student.phone}</small> | <small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>`;
-        } else {
-            infoDisplay = `<br><small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>`;
-        }
+        let infoDisplay = isAdmin()
+            ? `<br><small><i class="fas fa-phone"></i> ${student.phone}</small> | <small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>`
+            : `<br><small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>`;
 
         tr.innerHTML = `
             <td style="${rowStyle}">${index + 1}</td>
@@ -317,10 +318,10 @@ window.deleteStudent = async function(firebaseId, studentName) {
     }
 }
 
-// Xử lý thêm sinh viên (Check safe)
-const addStudentForm = document.getElementById('add-student-form');
-if (addStudentForm) {
-    addStudentForm.addEventListener('submit', async function(e) {
+// XỬ LÝ FORM THÊM MÔN SINH (ĐÃ SỬA LỖI TỐC ĐỘ ẢNH)
+const addForm = document.getElementById('add-student-form');
+if(addForm) {
+    addForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const name = document.getElementById('student-name').value;
         const phone = document.getElementById('student-phone').value;
@@ -333,7 +334,8 @@ if (addStudentForm) {
 
         let imgUrl = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
         if (imgInput.files && imgInput.files[0]) {
-            if (imgInput.files[0].size > 500 * 1024) { alert("Ảnh quá lớn!"); return; }
+            // GIỚI HẠN DUNG LƯỢNG 100KB ĐỂ WEB KHÔNG BỊ LAG
+            if (imgInput.files[0].size > 100 * 1024) { alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 100KB để web chạy nhanh."); return; }
             imgUrl = await readFileAsBase64(imgInput.files[0]);
         }
         
@@ -376,6 +378,7 @@ window.disableEditMode = function() {
 }
 window.previewProfileAvatar = function(input) {
     if (input.files && input.files[0]) {
+        if (input.files[0].size > 100 * 1024) { alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 100KB."); return; }
         const reader = new FileReader();
         reader.onload = function(e) { document.getElementById('profile-img-preview').src = e.target.result; }
         reader.readAsDataURL(input.files[0]);
@@ -403,7 +406,7 @@ window.saveProfile = async function() {
 
 let currentViewingPostId = null; let editingFirebaseId = null; 
 window.togglePostForm = function(isEditMode = false) { const form = document.getElementById('post-creator'); const submitBtn = form.querySelector('.btn-submit'); if (form.style.display === 'none') { form.style.display = 'block'; if (!isEditMode) { document.getElementById('post-title').value = ""; document.getElementById('post-content').innerHTML = ""; editingFirebaseId = null; if(submitBtn) submitBtn.innerText = "Đăng bài"; } } else if (!isEditMode) { form.style.display = 'none'; } }
-window.handleMediaUpload = function(input) { const file = input.files[0]; if (!file || file.size > 3*1024*1024) { alert("File quá lớn!"); return; } const reader = new FileReader(); reader.onload = function(e) { const mediaHTML = file.type.startsWith('video') ? `<br><video controls src="${e.target.result}"></video><br>` : `<br><img src="${e.target.result}"><br>`; document.getElementById('post-content').innerHTML += mediaHTML; input.value = ""; }; reader.readAsDataURL(file); }
+window.handleMediaUpload = function(input) { const file = input.files[0]; if (!file || file.size > 2*1024*1024) { alert("File quá lớn!"); return; } const reader = new FileReader(); reader.onload = function(e) { const mediaHTML = file.type.startsWith('video') ? `<br><video controls src="${e.target.result}"></video><br>` : `<br><img src="${e.target.result}"><br>`; document.getElementById('post-content').innerHTML += mediaHTML; input.value = ""; }; reader.readAsDataURL(file); }
 window.publishPost = async function() { const title = document.getElementById('post-title').value; const content = document.getElementById('post-content').innerHTML; if(!title) { alert("Thiếu tiêu đề!"); return; } try { if (editingFirebaseId) { await updateDoc(doc(db, COLL_POSTS, editingFirebaseId), { title: title, content: content }); alert("Đã cập nhật!"); editingFirebaseId = null; } else { await addDoc(collection(db, COLL_POSTS), { id: Date.now(), title: title, content: content, date: new Date().toLocaleDateString('vi-VN'), comments: [] }); alert("Đã đăng bài!"); } document.getElementById('post-creator').style.display = 'none'; } catch (e) { alert("Lỗi: " + e.message); } }
 window.deletePost = async function(firebaseId) { if (confirm("Xóa bài viết?")) { await deleteDoc(doc(db, COLL_POSTS, firebaseId)); alert("Đã xóa!"); } }
 window.editPost = function(firebaseId) { const post = posts.find(p => p.firebaseId === firebaseId); if (!post) return; window.togglePostForm(true); document.getElementById('post-title').value = post.title; document.getElementById('post-content').innerHTML = post.content; editingFirebaseId = firebaseId; document.querySelector('#post-creator .btn-submit').innerText = "Lưu cập nhật"; document.getElementById('post-creator').scrollIntoView({behavior:"smooth"}); }
