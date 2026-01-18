@@ -32,7 +32,6 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         data.firebaseId = doc.id; 
         students.push(data);
     });
-    // Bảo mật Real-time: Nếu bị Admin xóa khi đang online
     if (currentUser && !isAdmin()) {
         const myRecords = students.filter(s => s.phone === currentUser.phone);
         if (myRecords.length === 0) {
@@ -80,6 +79,12 @@ window.showSection = function(sectionId) {
 function isAdmin() { return currentUser && currentUser.phone === '000'; }
 window.formatDoc = function(cmd, value = null) { document.execCommand(cmd, false, value); }
 
+// Hàm định dạng cho BÌNH LUẬN (Mới)
+window.formatComment = function(cmd) {
+    document.execCommand(cmd, false, null);
+    document.getElementById('comment-input-rich').focus();
+}
+
 const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -99,7 +104,6 @@ document.getElementById('register-form').addEventListener('submit', async functi
 
     if (!club) { alert("Vui lòng chọn Câu Lạc Bộ!"); return; }
     
-    // Logic: SĐT được phép trùng nếu ở CLB khác nhau.
     if (students.some(s => s.phone === phone && s.club === club)) { 
         alert(`Số điện thoại ${phone} đã đăng ký tại CLB ${club} rồi!`); return; 
     }
@@ -123,13 +127,11 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
     const name = document.getElementById('login-name').value.trim();
     const phone = document.getElementById('login-phone').value.trim();
 
-    // Admin Login
     if (phone === '000' && name.toLowerCase() === 'admin') {
         currentUser = { name: "Huấn Luyện Viên", phone: "000", clubs: ["ALL"], role: "admin" };
         loginSuccess(); return;
     }
 
-    // Student Login
     const matchedRecords = students.filter(s => s.phone === phone && s.name.toLowerCase() === name.toLowerCase());
     if (matchedRecords.length > 0) {
         const myClubs = matchedRecords.map(s => s.club);
@@ -212,7 +214,6 @@ window.switchTab = function(tabId) {
     }
 }
 
-// --- RENDER BẢNG (LOGIC ẨN SỐ ĐIỆN THOẠI) ---
 function renderAttendanceTable() {
     const tbody = document.getElementById('attendance-list');
     tbody.innerHTML = "";
@@ -240,16 +241,12 @@ function renderAttendanceTable() {
         const rowStyle = isMe ? 'background-color: #e3f2fd; border-left: 5px solid #0055A4;' : ''; 
         let dateInfo = student.lastAttendanceDate ? `<br><small style="color:blue">Cập nhật: ${student.lastAttendanceDate}</small>` : '';
 
-        // --- ĐÂY LÀ PHẦN QUAN TRỌNG: ẨN SĐT VỚI MÔN SINH ---
         let infoDisplay = "";
         if (isAdmin()) {
-            // Admin thấy cả SĐT và Ngày sinh
             infoDisplay = `<br><small><i class="fas fa-phone"></i> ${student.phone}</small> | <small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>`;
         } else {
-            // Môn sinh CHỈ thấy Ngày sinh
             infoDisplay = `<br><small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>`;
         }
-        // ----------------------------------------------------
 
         tr.innerHTML = `
             <td style="${rowStyle}">${index + 1}</td>
@@ -265,7 +262,6 @@ function renderAttendanceTable() {
     });
 }
 
-// Lưu điểm danh (Admin)
 window.saveDailyAttendance = async function() {
     if(!isAdmin()) return;
     if(!confirm("Lưu điểm danh hôm nay?")) return;
@@ -466,31 +462,62 @@ window.backToNewsList = function() {
     currentViewingPostId = null;
     if(document.getElementById('btn-create-post') && isAdmin()) document.getElementById('btn-create-post').style.display = 'block';
 }
+
+// --- LOGIC HIỂN THỊ BÌNH LUẬN NÂNG CẤP (QUAN TRỌNG) ---
 function renderComments(post) {
     const list = document.getElementById('comment-list'); list.innerHTML = "";
     if (!post.comments) post.comments = [];
     if (post.comments.length === 0) { list.innerHTML = "<p style='color:#777;font-style:italic;'>Chưa có bình luận.</p>"; return; }
+    
     post.comments.forEach((cmt, idx) => {
-        const div = document.createElement('div'); div.className = 'comment-item';
-        let role = cmt.isAdminComment ? "admin-role" : "";
-        let name = cmt.isAdminComment ? "HLV - Quản Trị" : cmt.userName;
+        const div = document.createElement('div'); 
+        
+        // Phân biệt class HLV vs Môn sinh
+        const roleClass = cmt.isAdminComment ? "is-admin" : "is-student";
+        const roleBadge = cmt.isAdminComment ? `<span class="comment-role-badge">Quản trị viên</span>` : "";
+        const authorName = cmt.isAdminComment ? "Huấn Luyện Viên" : cmt.userName;
+
+        div.className = `comment-item ${roleClass}`;
+        
         let delBtn = isAdmin() ? `<button class="btn-delete-cmt" onclick="deleteComment('${post.firebaseId}', ${idx})"><i class="fas fa-trash"></i></button>` : "";
-        div.innerHTML = `<div class="comment-author ${role}">${name} <span class="comment-date">(${cmt.date})</span></div><div class="comment-text">${cmt.text}</div>${delBtn}`;
+        
+        div.innerHTML = `
+            <div class="comment-header">
+                <span class="comment-author-name">${authorName} ${roleBadge}</span>
+                <span class="comment-date">${cmt.date}</span>
+            </div>
+            <div class="comment-text">${cmt.text}</div>
+            ${delBtn}
+        `;
         list.appendChild(div);
     });
 }
-window.submitComment = async function(e) {
-    e.preventDefault();
+
+// Gửi bình luận mới (Lấy từ khung soạn thảo Rich Text)
+window.submitComment = async function() {
     if (!currentUser) { alert("Vui lòng đăng nhập!"); window.showSection('login'); return; }
-    const text = document.getElementById('comment-input').value.trim();
-    if (!text) return;
+    
+    // Lấy nội dung HTML thay vì text thuần để giữ định dạng in đậm/nghiêng
+    const content = document.getElementById('comment-input-rich').innerHTML.trim();
+    
+    if (!content) return;
     const post = posts.find(p => p.firebaseId === currentViewingPostId);
     if (!post) return;
-    const newComment = { userId: currentUser.phone, userName: currentUser.name, text: text, date: new Date().toLocaleString(), isAdminComment: isAdmin() };
+    
+    const newComment = { 
+        userId: currentUser.phone, 
+        userName: currentUser.name, 
+        text: content, // Lưu HTML
+        date: new Date().toLocaleString(), 
+        isAdminComment: isAdmin() 
+    };
+    
     let updatedComments = post.comments || []; updatedComments.push(newComment);
     await updateDoc(doc(db, COLL_POSTS, currentViewingPostId), { comments: updatedComments });
-    document.getElementById('comment-input').value = "";
+    
+    document.getElementById('comment-input-rich').innerHTML = ""; // Xóa trắng khung nhập
 }
+
 window.deleteComment = async function(firebaseId, commentIndex) {
     if (!confirm("Xóa bình luận?")) return;
     const post = posts.find(p => p.firebaseId === firebaseId);
