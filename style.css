@@ -233,3 +233,37 @@ input:not(:disabled) { background-color: #fff; border: 1px solid var(--vovinam-b
 .btn-edit-post i, .btn-delete-post i {
     font-size: 1rem;
 }
+
+/* --- XỬ LÝ HÌNH ẢNH & MEDIA (SỬA LỖI TRÀN ẢNH) --- */
+
+/* 1. Quy tắc chung cho ảnh/video trong bài viết */
+.post-editor img, .post-editor video,
+.article-content img, .article-content video,
+.news-preview img, .news-preview video {
+    border-radius: 5px;
+    margin: 10px auto; /* Căn giữa ảnh */
+    display: block; /* Xuống dòng */
+}
+
+/* 2. CHẾ ĐỘ PREVIEW (Ngoài danh sách tin tức) */
+/* Thu nhỏ ảnh lại cho gọn, không chiếm hết màn hình */
+.news-preview img, .news-preview video {
+    max-width: 100% !important; /* Bắt buộc không được tràn ra ngoài khung */
+    width: auto;                /* Chiều rộng tự nhiên */
+    max-height: 250px;          /* QUAN TRỌNG: Giới hạn chiều cao chỉ 250px */
+    object-fit: cover;          /* Cắt ảnh gọn gàng vào khung 250px mà không bị méo */
+}
+
+/* 3. CHẾ ĐỘ XEM CHI TIẾT (Trong bài viết) */
+/* Phóng to ảnh rõ nét nhưng vẫn nằm trong khung */
+.article-content img, .article-content video {
+    max-width: 100% !important; /* Ảnh to tối đa bằng chiều ngang bài viết */
+    height: auto !important;    /* Chiều cao tự động theo tỷ lệ ảnh (không bị méo) */
+    object-fit: contain;        /* Hiển thị trọn vẹn nội dung ảnh */
+}
+
+/* 4. Trong khung soạn thảo (Khi Admin đăng bài) */
+.post-editor img, .post-editor video {
+    max-width: 100% !important;
+    height: auto;
+}
