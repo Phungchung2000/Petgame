@@ -32,6 +32,7 @@ onSnapshot(collection(db, COLL_STUDENTS), (snapshot) => {
         window.students.push(data);
     });
     
+    // Refresh User Session
     if (window.currentUser && !window.isAdmin()) {
         const myRecords = window.students.filter(s => s.phone === window.currentUser.phone);
         if (myRecords.length === 0) {
@@ -194,7 +195,6 @@ window.renderAttendanceTable = function() {
         let roleIcon = student.role === 'assistant' ? ` <i class="fas fa-star" style="color: #FFD700;" title="Hướng dẫn viên"></i>` : '';
         let isMe = (!window.isAdmin() && window.currentUser.phone === student.phone) ? "(Bạn)" : "";
         const rowStyle = isMe ? 'background-color: #e3f2fd; border-left: 5px solid #0055A4;' : ''; 
-        
         let dateInfo = student.lastAttendanceDate ? `<br><small style="color:blue">Cập nhật: ${student.lastAttendanceDate}</small>` : '';
         let infoDisplay = window.canManage() ? `<br><small><i class="fas fa-phone"></i> ${student.phone}</small> | <small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>` : `<br><small><i class="fas fa-birthday-cake"></i> ${student.dob}</small>`;
 
@@ -212,25 +212,21 @@ window.renderAttendanceTable = function() {
     });
 };
 
-// --- SAVE ATTENDANCE (CẬP NHẬT GIỜ PHÚT) ---
+// --- SAVE ATTENDANCE ---
 window.saveDailyAttendance = async function() {
     if(!window.canManage()) return;
     if(!confirm("Lưu điểm danh hôm nay và ghi vào lịch sử?")) return;
 
     const clubStudents = window.students.filter(s => s.club === window.currentClub);
     
-    // Tạo ngày tháng chuẩn để LƯU và LỌC (chỉ ngày)
+    // Ngày giờ chuẩn
     const d = new Date();
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
-    const todayStr = `${day}/${month}/${year}`; // 19/01/2026
-
-    // Tạo Giờ:Phút để HIỂN THỊ
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const timeStr = `${hours}:${minutes}`; 
-    const displayDateTime = `${timeStr} ${todayStr}`; // 08:30 19/01/2026
+    const todayStr = `${day}/${month}/${year}`;
+    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const displayDateTime = `${timeStr} ${todayStr}`;
 
     const batch = writeBatch(db);
     let historyRecords = [];
@@ -244,7 +240,6 @@ window.saveDailyAttendance = async function() {
             const note = noteEl.value.trim();
             
             const docRef = doc(db, COLL_STUDENTS, student.firebaseId);
-            // Cập nhật hiển thị trong danh sách môn sinh (Có giờ phút)
             batch.update(docRef, { isPresent, note, lastAttendanceDate: displayDateTime });
 
             historyRecords.push({
@@ -264,8 +259,8 @@ window.saveDailyAttendance = async function() {
         const logDocId = `${safeDateId}_${window.currentClub}`;
         
         const logData = {
-            date: todayStr, // Giữ nguyên ngày thuần túy để bộ lọc hoạt động
-            timestampStr: displayDateTime, // Trường mới: Chứa cả giờ phút để hiển thị
+            date: todayStr,
+            timestampStr: displayDateTime,
             club: window.currentClub,
             timestamp: Date.now(),
             records: historyRecords
@@ -362,7 +357,7 @@ window.saveStudentEdits = async function(e) {
     } catch (error) { alert("Lỗi: " + error.message); }
 };
 
-// --- HISTORY LOGIC (HIỂN THỊ CÓ GIỜ) ---
+// --- HISTORY LOGIC ---
 window.openHistorySection = function() {
     window.showSection('history-section');
     const title = document.getElementById('history-title');
@@ -405,7 +400,6 @@ window.loadHistoryData = async function() {
             const snapshot = await getDocs(q);
             if (!snapshot.empty) {
                 const logData = snapshot.docs[0].data();
-                // Ưu tiên dùng timestampStr (có giờ) để hiển thị, nếu không có thì dùng date cũ
                 const displayDate = logData.timestampStr || logData.date; 
                 historyRecords = logData.records.map(r => ({...r, date: displayDate}));
             }
@@ -419,11 +413,7 @@ window.loadHistoryData = async function() {
                     historyRecords.push({ date: displayDate, name: logData.club, status: myRecord.status, note: myRecord.note }); 
                 } 
             });
-            // Sắp xếp theo ngày (convert về timestamp để sort chính xác)
-            historyRecords.sort((a, b) => {
-                // Đây là sắp xếp chuỗi tạm thời, nếu muốn chính xác tuyệt đối cần parseDate
-                return b.date.localeCompare(a.date);
-            });
+            historyRecords.sort((a, b) => { return b.date.localeCompare(a.date); });
         }
         loading.style.display = "none";
         if(historyRecords.length === 0) { emptyMsg.style.display = "block"; return; }
@@ -431,7 +421,6 @@ window.loadHistoryData = async function() {
         historyRecords.forEach(rec => {
             const tr = document.createElement('tr');
             const statusClass = rec.status === "Có mặt" ? "status-present" : "status-absent";
-            // Cột đầu tiên hiển thị ngày giờ
             tr.innerHTML = `<td>${rec.date}</td><td><strong>${rec.name}</strong></td><td><span class="status-badge ${statusClass}">${rec.status}</span></td><td>${rec.note || ''}</td>`;
             list.appendChild(tr);
         });
@@ -482,7 +471,24 @@ setTimeout(() => {
             } else { alert("Thông tin sai!"); }
         }
     });
+    
+    // Đã thêm lại chức năng Đăng ký (Quan trọng)
+    const regF = document.getElementById('register-form');
+    if(regF) regF.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const dob = document.getElementById('reg-dob').value;
+        const club = document.getElementById('reg-club').value;
+        if (!club) return alert("Chọn CLB!");
+        if (window.students.some(s => s.phone === phone && s.club === club)) return alert("Đã tồn tại");
+        let img = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        const exist = window.students.find(s => s.phone === phone);
+        if(exist) img = exist.img;
+        await addDoc(collection(db, COLL_STUDENTS), { id: Date.now(), club, name, phone, dob, img, role: 'student', isPresent: false, note: "", lastAttendanceDate: "" });
+        alert("Đăng ký thành công!"); window.showSection('login');
+    });
 }, 1000);
 
 window.checkLoginStatus();
-console.log("✅ SYSTEM UPDATE 11.0: TIME DISPLAY ADDED");
+console.log("✅ SYSTEM RESTORED: REGISTRATION ACTIVE");
