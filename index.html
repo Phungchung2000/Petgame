@@ -11,12 +11,17 @@
 
     <header>
         <div class="header-content">
-            <div class="logo-container">
-                <img src="Logo_VVF.png" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Vovinam_Logo.svg/1200px-Vovinam_Logo.svg.png'" alt="Logo" class="logo">
-                <h1 class="hide-on-mobile">Vovinam Ea M'droh</h1>
+            <div class="mobile-header-top">
+                <div class="logo-container">
+                    <img src="Logo_VVF.png" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Vovinam_Logo.svg/1200px-Vovinam_Logo.svg.png'" alt="Logo" class="logo">
+                    <h1 class="hide-on-mobile">Vovinam Ea M'droh</h1>
+                </div>
+                <button class="mobile-menu-btn" onclick="window.toggleMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
             
-            <nav>
+            <nav id="main-nav">
                 <ul class="main-menu">
                     <li onclick="window.showSection('home')"><a href="#">Trang chủ</a></li>
                     <li id="menu-history" style="display: none;" onclick="window.openHistorySection()">
@@ -33,6 +38,7 @@
                         </ul>
                     </li>
                     <li onclick="window.showSection('news')"><a href="#">Tin tức</a></li>
+                    <li onclick="window.showSection('shop')"><a href="#">Cửa hàng <i class="fas fa-shopping-cart"></i></a></li>
                 </ul>
             </nav>
 
@@ -64,20 +70,11 @@
             <div class="club-slider">
                 <h3>Các Câu Lạc Bộ Trực Thuộc</h3>
                 <div class="slider-container">
-                    <div class="club-card" onclick="window.openClubManager('Nguyễn Huệ')">
-                        <i class="fas fa-school"></i> <h4>CLB Nguyễn Huệ</h4>
-                    </div>
-                    <div class="club-card" onclick="window.openClubManager('Lê Hữu Trác')">
-                        <i class="fas fa-yin-yang"></i> <h4>CLB Lê Hữu Trác</h4>
-                    </div>
-                    <div class="club-card" onclick="window.openClubManager('Nội Trú')">
-                        <i class="fas fa-users"></i> <h4>CLB Nội Trú</h4>
-                    </div>
-                    <div class="club-card" onclick="window.openClubManager('Y Ngông')">
-                        <i class="fas fa-fist-raised"></i> <h4>CLB Y Ngông</h4>
-                    </div>
-                   <div class="club-card" onclick="window.openClubManager('Hùng Vương')">
-                        <i class="fas fa-dragon"></i> <h4>CLB Hùng Vương</h4>
+                    <div class="club-card" onclick="window.openClubManager('Nguyễn Huệ')"><i class="fas fa-school"></i> <h4>CLB Nguyễn Huệ</h4></div>
+                    <div class="club-card" onclick="window.openClubManager('Lê Hữu Trác')"><i class="fas fa-yin-yang"></i> <h4>CLB Lê Hữu Trác</h4></div>
+                    <div class="club-card" onclick="window.openClubManager('Nội Trú')"><i class="fas fa-users"></i> <h4>CLB Nội Trú</h4></div>
+                    <div class="club-card" onclick="window.openClubManager('Y Ngông')"><i class="fas fa-fist-raised"></i> <h4>CLB Y Ngông</h4></div>
+                    <div class="club-card" onclick="window.openClubManager('Hùng Vương')"><i class="fas fa-dragon"></i> <h4>CLB Hùng Vương</h4></div>
                 </div>
             </div>
         </section>
@@ -86,14 +83,8 @@
             <div class="auth-container">
                 <h2>Đăng Nhập</h2>
                 <form id="login-form">
-                    <div class="form-group">
-                        <label>Họ và tên:</label>
-                        <input type="text" id="login-name" placeholder="Nhập họ tên" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Số điện thoại:</label>
-                        <input type="number" id="login-phone" placeholder="Nhập số điện thoại" required>
-                    </div>
+                    <div class="form-group"><label>Họ và tên:</label><input type="text" id="login-name" placeholder="Nhập họ tên" required></div>
+                    <div class="form-group"><label>Số điện thoại:</label><input type="number" id="login-phone" placeholder="Nhập số điện thoại" required></div>
                     <button type="submit" class="btn-submit">Đăng Nhập</button>
                     <p class="auth-link">Chưa có tài khoản? <a href="#" onclick="window.showSection('register')">Đăng ký ngay</a></p>
                 </form>
@@ -104,18 +95,24 @@
             <div class="auth-container">
                 <h2>Đăng Ký Thành Viên</h2>
                 <form id="register-form">
+                    <div class="form-group"><label>Họ và tên:</label><input type="text" id="reg-name" placeholder="Nhập họ và tên..." required></div>
+                    <div class="form-group"><label>Số điện thoại:</label><input type="number" id="reg-phone" placeholder="Tối đa 10 số" maxlength="10" required></div>
+                    <div class="form-group"><label>Ngày sinh:</label><input type="date" id="reg-dob" required></div>
+                    
                     <div class="form-group">
-                        <label>Họ và tên:</label>
-                        <input type="text" id="reg-name" placeholder="Nhập họ và tên..." required>
+                        <label>Cấp đai hiện tại:</label>
+                        <select id="reg-belt" required>
+                            <option value="Tự vệ">Đai Tự Vệ (Nhập môn)</option>
+                            <option value="Lam đai">Lam đai</option>
+                            <option value="Lam đai I">Lam đai I</option>
+                            <option value="Lam đai II">Lam đai II</option>
+                            <option value="Lam đai III">Lam đai III</option>
+                            <option value="Chuẩn hoàng đai">Chuẩn hoàng đai</option>
+                            <option value="Hoàng đai">Hoàng đai</option>
+                            <option value="Hoàng đai I">Hoàng đai I</option>
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label>Số điện thoại:</label>
-                        <input type="number" id="reg-phone" placeholder="Tối đa 10 số" maxlength="10" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Ngày sinh:</label>
-                        <input type="date" id="reg-dob" required>
-                    </div>
+
                     <div class="form-group">
                         <label>Chọn Câu Lạc Bộ:</label>
                         <select id="reg-club" required>
@@ -134,7 +131,6 @@
 
         <section id="club-manager" style="display: none;">
             <h2 id="current-club-title" class="section-title">Quản lý CLB</h2>
-            
             <div id="club-assistants-display" style="text-align: center; color: #0055A4; margin-bottom: 15px; font-style: italic; font-weight: 500;"></div>
 
             <div class="club-tabs">
@@ -143,23 +139,38 @@
             </div>
             
             <div id="tab-add-student" class="tab-content" style="display: none;">
+                <div class="bulk-upload-area" style="background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px dashed #0055A4;">
+                    <h4><i class="fas fa-file-upload"></i> Nhập danh sách nhanh (Excel/CSV)</h4>
+                    <p style="font-size: 0.9rem; color: #555;">File mẫu: <b>Họ tên, Số điện thoại, Ngày sinh, Cấp đai</b> (Lưu file định dạng <b>UTF-8</b>)</p>
+                    <input type="file" id="bulk-upload-input" accept=".csv, .txt">
+                    <button type="button" class="btn-bulk-upload" onclick="window.handleBulkUpload()">Tải lên danh sách</button>
+                    
+                    <button type="button" class="btn-delete-all" onclick="window.deleteAllStudents()" style="margin-left: 10px; background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                        <i class="fas fa-trash-alt"></i> Xóa TOÀN BỘ danh sách CLB này
+                    </button>
+                </div>
+                <hr>
+
                 <form id="add-student-form" onsubmit="window.handleAddStudent(event)">
+                    <div class="form-group"><label>Họ và tên:</label><input type="text" id="student-name" required></div>
+                    <div class="form-group"><label>Số điện thoại:</label><input type="number" id="student-phone" required></div>
+                    <div class="form-group"><label>Ngày sinh:</label><input type="date" id="student-dob" required></div>
+                    
                     <div class="form-group">
-                        <label>Họ và tên:</label>
-                        <input type="text" id="student-name" placeholder="Nhập tên môn sinh..." required>
+                        <label>Cấp đai:</label>
+                        <select id="student-belt" required>
+                            <option value="Tự vệ">Đai Tự Vệ</option>
+                            <option value="Lam đai">Lam đai</option>
+                            <option value="Lam đai I">Lam đai I</option>
+                            <option value="Lam đai II">Lam đai II</option>
+                            <option value="Lam đai III">Lam đai III</option>
+                            <option value="Chuẩn hoàng đai">Chuẩn hoàng đai</option>
+                            <option value="Hoàng đai">Hoàng đai</option>
+                            <option value="Hoàng đai I">Hoàng đai I</option>
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label>Số điện thoại:</label>
-                        <input type="number" id="student-phone" placeholder="Tối đa 10 số" maxlength="10" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Ngày sinh:</label>
-                        <input type="date" id="student-dob" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Ảnh đại diện (Dưới 1MB):</label>
-                        <input type="file" id="student-img" accept="image/*">
-                    </div>
+
+                    <div class="form-group"><label>Ảnh đại diện (Dưới 1MB):</label><input type="file" id="student-img" accept="image/*"></div>
                     <button type="submit" class="btn-submit">Thêm vào danh sách</button>
                 </form>
             </div>
@@ -170,8 +181,7 @@
                         <thead>
                             <tr>
                                 <th>STT</th>
-                                <th>Ảnh</th>
-                                <th>Họ và Tên</th>
+                                <th>Thông tin</th>
                                 <th>Trạng Thái</th>
                                 <th>Ghi chú</th>
                             </tr>
@@ -189,10 +199,7 @@
         <section id="history-section" style="display: none;">
             <h2 id="history-title" class="section-title">Lịch Sử Điểm Danh</h2>
             <div id="history-filters" class="history-controls" style="display: none;">
-                <div class="control-group">
-                    <label>Chọn ngày:</label>
-                    <input type="date" id="history-date-picker" onchange="window.loadHistoryData()">
-                </div>
+                <div class="control-group"><label>Chọn ngày:</label><input type="date" id="history-date-picker" onchange="window.loadHistoryData()"></div>
                 <div class="control-group">
                     <label>Chọn CLB:</label>
                     <select id="history-club-select" onchange="window.loadHistoryData()">
@@ -207,14 +214,7 @@
             </div>
             <div class="table-responsive">
                 <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Ngày</th>
-                            <th>Môn Sinh</th>
-                            <th>Trạng Thái</th>
-                            <th>Ghi chú</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Ngày</th><th>Môn Sinh</th><th>Trạng Thái</th><th>Ghi chú</th></tr></thead>
                     <tbody id="history-list"></tbody>
                 </table>
             </div>
@@ -225,11 +225,8 @@
         <section id="news" style="display: none;">
             <div class="news-header">
                 <h2>Tin Tức & Thông Báo</h2>
-                <button id="btn-create-post" onclick="window.togglePostForm()" class="btn-create-news" style="display: none;">
-                    <i class="fas fa-pen"></i> Đăng bài mới
-                </button>
+                <button id="btn-create-post" onclick="window.togglePostForm()" class="btn-create-news" style="display: none;"><i class="fas fa-pen"></i> Đăng bài mới</button>
             </div>
-
             <div id="news-filter-area" class="news-filters" style="display: none;">
                 <span style="font-weight: bold; color: var(--vovinam-blue); margin-right: 10px;">Lọc tin hiển thị:</span>
                 <label><input type="checkbox" value="Global" checked onchange="window.renderNews()"> Tin chung</label>
@@ -239,10 +236,8 @@
                 <label><input type="checkbox" value="Y Ngông" checked onchange="window.renderNews()"> Y Ngông</label>
                 <label><input type="checkbox" value="Hùng Vương" checked onchange="window.renderNews()"> Hùng Vương</label>
             </div>
-
             <div id="post-creator" style="display: none;">
                 <h3>Soạn thảo bài viết</h3>
-                
                 <div class="form-group">
                     <label>Đăng tin cho:</label>
                     <select id="post-target-club" style="width: 100%; padding: 8px; font-weight: bold;">
@@ -254,7 +249,6 @@
                         <option value="Hùng Vương">CLB Hùng Vương</option>
                     </select>
                 </div>
-
                 <input type="text" id="post-title" placeholder="Tiêu đề bài viết..." class="post-input">
                 <div class="rich-editor-toolbar">
                     <button type="button" onclick="window.formatDoc('bold')"><b>B</b></button>
@@ -289,6 +283,36 @@
             </div>
         </section>
         
+        <section id="shop" style="display: none;">
+            <div class="shop-header">
+                <h2><i class="fas fa-store"></i> Cửa Hàng Võ Phục & Dụng Cụ</h2>
+                <div class="cart-summary"><i class="fas fa-shopping-cart"></i> Giỏ hàng: <span id="cart-count">0</span> món</div>
+            </div>
+            <div class="shop-container">
+                <div class="product-grid">
+                    <div class="product-card">
+                        <img src="https://vovinam.vn/wp-content/uploads/2019/04/vo-phuc-vovinam-1.jpg" alt="Võ phục">
+                        <h4>Võ Phục Vovinam</h4>
+                        <p class="price">250.000đ</p>
+                        <button class="btn-add-cart" onclick="alert('Đã thêm vào giỏ hàng (Demo)')">Thêm vào giỏ</button>
+                    </div>
+                    <div class="product-card">
+                        <img src="https://tanvietco.com/wp-content/uploads/2015/12/dai-vovinam-cac-loai.jpg" alt="Đai">
+                        <h4>Đai Các Cấp</h4>
+                        <p class="price">80.000đ</p>
+                        <button class="btn-add-cart" onclick="alert('Đã thêm vào giỏ hàng (Demo)')">Thêm vào giỏ</button>
+                    </div>
+                    <div class="product-card">
+                        <img src="https://dungcuvothuat.vn/wp-content/uploads/2023/02/gang-tay-boxing-bn-cam-1.jpg" alt="Găng">
+                        <h4>Găng Tay Tập Luyện</h4>
+                        <p class="price">350.000đ</p>
+                        <button class="btn-add-cart" onclick="alert('Đã thêm vào giỏ hàng (Demo)')">Thêm vào giỏ</button>
+                    </div>
+                </div>
+                <div class="shop-notice"><p>* Liên hệ trực tiếp HLV để đặt mua và nhận hàng tại CLB.</p></div>
+            </div>
+        </section>
+
         <section id="profile" style="display: none;">
             <div class="profile-container">
                 <div class="profile-header">
@@ -304,6 +328,7 @@
                     <div class="form-group"><label>Số điện thoại:</label><input type="text" id="profile-phone" disabled style="background-color: #e9ecef;"></div>
                     <div class="form-group"><label>Ngày sinh:</label><input type="date" id="profile-dob" disabled></div>
                     <div class="form-group"><label>Câu lạc bộ:</label><input type="text" id="profile-club" disabled style="background-color: #e9ecef;"></div>
+                    <div class="form-group"><label>Cấp đai hiện tại:</label><input type="text" id="profile-belt" disabled style="background-color: #fffde7; color: #0055A4; font-weight: bold;"></div>
                     <div class="profile-actions">
                         <button type="button" id="btn-edit-profile" class="btn-edit" onclick="window.enableEditProfile()"><i class="fas fa-pen"></i> Chỉnh sửa</button>
                         <button type="button" id="btn-save-profile" class="btn-save" style="display: none;" onclick="window.saveProfile()"><i class="fas fa-save"></i> Lưu thay đổi</button>
@@ -322,6 +347,20 @@
                     <div class="form-group"><label>SĐT:</label><input type="number" id="edit-phone" required></div>
                     <div class="form-group"><label>Ngày sinh:</label><input type="date" id="edit-dob" required></div>
                     
+                    <div class="form-group">
+                        <label>Cấp đai:</label>
+                        <select id="edit-belt" required>
+                            <option value="Tự vệ">Đai Tự Vệ</option>
+                            <option value="Lam đai">Lam đai</option>
+                            <option value="Lam đai I">Lam đai I</option>
+                            <option value="Lam đai II">Lam đai II</option>
+                            <option value="Lam đai III">Lam đai III</option>
+                            <option value="Chuẩn hoàng đai">Chuẩn hoàng đai</option>
+                            <option value="Hoàng đai">Hoàng đai</option>
+                            <option value="Hoàng đai I">Hoàng đai I</option>
+                        </select>
+                    </div>
+
                     <div class="form-group" id="div-edit-role" style="display: none;">
                         <label style="color: red; font-weight:bold;">Chức vụ (Chỉ HLV chỉnh sửa):</label>
                         <select id="edit-role" style="width: 100%; padding: 8px; border: 1px solid red; font-weight: bold;">
@@ -348,6 +387,6 @@
         <p>&copy; Vovinam Ea M'droh</p>
     </footer>
 
-    <script type="module" src="script.js?v=9.0"></script>
+    <script type="module" src="script.js?v=13.0"></script>
 </body>
 </html>
