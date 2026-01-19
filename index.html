@@ -130,19 +130,22 @@
 
         <section id="club-manager" style="display: none;">
             <h2 id="current-club-title" class="section-title">Quản lý CLB</h2>
+            
+            <div id="club-assistants-display" style="text-align: center; color: #0055A4; margin-bottom: 15px; font-style: italic; font-weight: 500;"></div>
+
             <div class="club-tabs">
                 <button class="tab-btn active" id="btn-tab-attendance" onclick="window.switchTab('attendance')">Điểm Danh</button>
                 <button class="tab-btn" id="btn-add-student" onclick="window.switchTab('add-student')">Thêm Môn Sinh</button>
             </div>
             
             <div id="tab-add-student" class="tab-content" style="display: none;">
-                <form id="add-student-form">
+                <form id="add-student-form" onsubmit="window.handleAddStudent(event)">
                     <div class="form-group">
                         <label>Họ và tên:</label>
                         <input type="text" id="student-name" placeholder="Nhập tên môn sinh..." required>
                     </div>
                     <div class="form-group">
-                        <label>Số điện thoại (PH/Môn sinh):</label>
+                        <label>Số điện thoại:</label>
                         <input type="number" id="student-phone" placeholder="Tối đa 10 số" maxlength="10" required>
                     </div>
                     <div class="form-group">
@@ -221,8 +224,30 @@
                     <i class="fas fa-pen"></i> Đăng bài mới
                 </button>
             </div>
+
+            <div id="news-filter-area" class="news-filters" style="display: none;">
+                <span style="font-weight: bold; color: var(--vovinam-blue); margin-right: 10px;">Lọc tin hiển thị:</span>
+                <label><input type="checkbox" value="Global" checked onchange="window.renderNews()"> Tin chung</label>
+                <label><input type="checkbox" value="Nguyễn Huệ" checked onchange="window.renderNews()"> Nguyễn Huệ</label>
+                <label><input type="checkbox" value="Lê Hữu Trác" checked onchange="window.renderNews()"> Lê Hữu Trác</label>
+                <label><input type="checkbox" value="Nội Trú" checked onchange="window.renderNews()"> Nội Trú</label>
+                <label><input type="checkbox" value="Y Ngông" checked onchange="window.renderNews()"> Y Ngông</label>
+            </div>
+
             <div id="post-creator" style="display: none;">
                 <h3>Soạn thảo bài viết</h3>
+                
+                <div class="form-group">
+                    <label>Đăng tin cho:</label>
+                    <select id="post-target-club" style="width: 100%; padding: 8px; font-weight: bold;">
+                        <option value="Global">Toàn bộ (Tin chung)</option>
+                        <option value="Nguyễn Huệ">CLB Nguyễn Huệ</option>
+                        <option value="Lê Hữu Trác">CLB Lê Hữu Trác</option>
+                        <option value="Nội Trú">CLB Nội Trú</option>
+                        <option value="Y Ngông">CLB Y Ngông</option>
+                    </select>
+                </div>
+
                 <input type="text" id="post-title" placeholder="Tiêu đề bài viết..." class="post-input">
                 <div class="rich-editor-toolbar">
                     <button type="button" onclick="window.formatDoc('bold')"><b>B</b></button>
@@ -266,34 +291,15 @@
                         <input type="file" id="profile-avatar-upload" style="display: none;" accept="image/*" onchange="window.previewProfileAvatar(this)">
                     </div>
                     <h2>Hồ Sơ Cá Nhân</h2>
-                    <p style="color: #666; font-size: 0.9rem;">(Bạn có thể tự cập nhật thông tin tại đây)</p>
                 </div>
-                
                 <form id="profile-form">
-                    <div class="form-group">
-                        <label>Họ và tên:</label>
-                        <input type="text" id="profile-name" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Số điện thoại (Cố định - Không thể sửa):</label>
-                        <input type="text" id="profile-phone" disabled style="background-color: #e9ecef; cursor: not-allowed;">
-                    </div>
-                    <div class="form-group">
-                        <label>Ngày sinh:</label>
-                        <input type="date" id="profile-dob" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Câu lạc bộ (Cố định):</label>
-                        <input type="text" id="profile-club" disabled style="background-color: #e9ecef; cursor: not-allowed;">
-                    </div>
-                    
+                    <div class="form-group"><label>Họ và tên:</label><input type="text" id="profile-name" disabled></div>
+                    <div class="form-group"><label>Số điện thoại:</label><input type="text" id="profile-phone" disabled style="background-color: #e9ecef;"></div>
+                    <div class="form-group"><label>Ngày sinh:</label><input type="date" id="profile-dob" disabled></div>
+                    <div class="form-group"><label>Câu lạc bộ:</label><input type="text" id="profile-club" disabled style="background-color: #e9ecef;"></div>
                     <div class="profile-actions">
-                        <button type="button" id="btn-edit-profile" class="btn-edit" onclick="window.enableEditProfile()">
-                            <i class="fas fa-pen"></i> Chỉnh sửa thông tin
-                        </button>
-                        <button type="button" id="btn-save-profile" class="btn-save" style="display: none;" onclick="window.saveProfile()">
-                            <i class="fas fa-save"></i> Lưu thay đổi
-                        </button>
+                        <button type="button" id="btn-edit-profile" class="btn-edit" onclick="window.enableEditProfile()"><i class="fas fa-pen"></i> Chỉnh sửa</button>
+                        <button type="button" id="btn-save-profile" class="btn-save" style="display: none;" onclick="window.saveProfile()"><i class="fas fa-save"></i> Lưu thay đổi</button>
                     </div>
                 </form>
             </div>
@@ -308,6 +314,15 @@
                     <div class="form-group"><label>Họ tên:</label><input type="text" id="edit-name" required></div>
                     <div class="form-group"><label>SĐT:</label><input type="number" id="edit-phone" required></div>
                     <div class="form-group"><label>Ngày sinh:</label><input type="date" id="edit-dob" required></div>
+                    
+                    <div class="form-group" id="div-edit-role" style="display: none;">
+                        <label style="color: red; font-weight:bold;">Chức vụ (Chỉ HLV chỉnh sửa):</label>
+                        <select id="edit-role" style="width: 100%; padding: 8px; border: 1px solid red; font-weight: bold;">
+                            <option value="student">Môn sinh</option>
+                            <option value="assistant">Hướng dẫn viên (Quản lý CLB)</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label>Cập nhật Ảnh (Dưới 1MB):</label>
                         <div style="text-align: center;"><img id="edit-img-preview" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;"></div>
@@ -323,9 +338,9 @@
     <footer>
         <p>Liên hệ Ban Chủ Nhiệm</p>
         <p><i class="fas fa-phone-alt"></i> / Zalo: 0922904904</p>
-        <p>&copy; Vovinam Lộc Shadow - Tinh thần Việt Võ Đạo</p>
+        <p>&copy; Vovinam Lộc Shadow</p>
     </footer>
 
-    <script type="module" src="script.js?v=6.0"></script>
+    <script type="module" src="script.js?v=9.0"></script>
 </body>
 </html>
