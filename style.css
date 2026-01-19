@@ -87,3 +87,183 @@ input:checked + .slider:before { transform: translateX(26px); }
 .profile-actions { display: flex; gap: 10px; margin-top: 20px; }
 .btn-edit { background: #6c757d; color: white; flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
 .btn-save { background: var(--vovinam-blue); color: white; flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
+
+Chào bạn, tôi đã hiểu yêu cầu. Bạn muốn giao diện tin tức chuyên nghiệp hơn giống như các trang báo chí:
+
+Danh sách tin: Ảnh thu nhỏ (thumbnail), nội dung ngắn gọn.
+
+Chi tiết tin: Ảnh phóng to đầy đủ.
+
+Nút bấm: Đẹp, rõ ràng, phân biệt màu sắc (Vàng cho Sửa, Đỏ cho Xóa).
+
+Dưới đây là mã nguồn đã được tối ưu hóa giao diện (CSS) và logic hiển thị (JS). Bạn hãy cập nhật 2 file này nhé.
+
+1. FILE style.css
+Thay đổi: Thiết lập kích thước ảnh cho 2 chế độ (Xem trước và Xem chi tiết), trang trí lại các nút bấm.
+
+CSS
+
+/* --- GIỮ NGUYÊN CÁC PHẦN TRƯỚC, CHỈ SỬA/THÊM PHẦN TIN TỨC DƯỚI ĐÂY --- */
+
+/* ... (Các code cũ của Header, Footer, Auth... giữ nguyên) ... */
+
+/* === GIAO DIỆN TIN TỨC (NEWS SYSTEM) === */
+
+/* 1. Thanh tiêu đề và Nút Đăng bài */
+.news-header { 
+    display: flex; 
+    justify-content: space-between; /* Đẩy tiêu đề sang trái, nút sang phải */
+    align-items: center; 
+    margin-bottom: 25px; 
+    border-bottom: 2px solid #eee; 
+    padding-bottom: 15px; 
+}
+
+.news-header h2 { 
+    margin: 0; 
+    color: var(--vovinam-blue); 
+    font-size: 1.5rem;
+    text-transform: uppercase;
+}
+
+.btn-create-news { 
+    background: linear-gradient(135deg, #FFD700, #FFC107); /* Màu vàng sáng */
+    color: #333; 
+    padding: 10px 25px; 
+    border: none; 
+    border-radius: 50px; 
+    cursor: pointer; 
+    font-weight: bold; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+    transition: all 0.3s ease;
+    display: flex; 
+    align-items: center; 
+    gap: 8px;
+}
+
+.btn-create-news:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2); 
+    background: linear-gradient(135deg, #FFC107, #FFB300);
+}
+
+/* 2. Khung bài viết trong danh sách */
+.news-item { 
+    background: white; 
+    padding: 25px; 
+    margin-bottom: 25px; 
+    border-radius: 10px; 
+    box-shadow: 0 3px 6px rgba(0,0,0,0.05); 
+    border-left: 5px solid var(--vovinam-blue); /* Viền xanh bên trái */
+    transition: transform 0.2s; 
+    position: relative;
+}
+
+.news-item:hover { 
+    transform: translateY(-3px); 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.news-item h3 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.news-item small {
+    display: block;
+    color: #777;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+/* 3. XỬ LÝ ẢNH TRONG DANH SÁCH (THUMBNAIL) */
+.news-preview { 
+    color: #555; 
+    margin: 10px 0; 
+    max-height: 300px; /* Giới hạn chiều cao khung xem trước */
+    overflow: hidden; /* Ẩn phần thừa */
+    position: relative;
+    /* Tạo hiệu ứng mờ dần ở đáy nếu bài quá dài */
+    mask-image: linear-gradient(180deg, black 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, black 60%, transparent 100%);
+}
+
+/* Quan trọng: Quy định kích thước ảnh trong danh sách tin */
+.news-preview img, .news-preview video { 
+    max-width: 100% !important; 
+    width: auto; /* Để ảnh không bị méo */
+    height: 200px; /* Chiều cao cố định cho ảnh thumbnail */
+    object-fit: cover; /* Cắt ảnh vừa khung mà không méo */
+    border-radius: 5px;
+    display: block;
+    margin: 10px 0;
+}
+
+/* 4. XỬ LÝ ẢNH TRONG BÀI VIẾT CHI TIẾT (FULL SIZE) */
+.article-content img, .article-content video { 
+    max-width: 100% !important; /* Ảnh to tối đa bằng màn hình */
+    height: auto !important; /* Chiều cao tự động theo tỷ lệ */
+    object-fit: contain; /* Hiển thị trọn vẹn ảnh */
+    display: block;
+    margin: 20px auto;
+    border-radius: 5px;
+}
+
+/* 5. Nút Xem & Bình luận */
+.read-more-btn { 
+    display: inline-block; 
+    background: var(--vovinam-blue); 
+    color: white; 
+    padding: 8px 20px; 
+    border-radius: 5px; 
+    text-decoration: none; 
+    font-weight: 600; 
+    margin-top: 15px; 
+    cursor: pointer; 
+    transition: background 0.3s;
+}
+
+.read-more-btn:hover { 
+    background: #003366; 
+}
+
+/* 6. Khu vực nút Admin (Sửa/Xóa) */
+.admin-actions { 
+    margin-top: 15px; 
+    padding-top: 15px; 
+    border-top: 1px dashed #ddd; 
+    display: flex; 
+    gap: 10px; 
+}
+
+.btn-edit-post, .btn-delete-post { 
+    border: none; 
+    padding: 8px 15px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-size: 0.9rem; 
+    font-weight: bold; 
+    display: flex; 
+    align-items: center; 
+    gap: 5px;
+    color: #333;
+}
+
+/* Nút Sửa màu Vàng */
+.btn-edit-post { 
+    background-color: #FFD700; 
+}
+.btn-edit-post:hover { 
+    background-color: #FFC107; 
+}
+
+/* Nút Xóa màu Đỏ */
+.btn-delete-post { 
+    background-color: #ff4444; 
+    color: white; 
+}
+.btn-delete-post:hover { 
+    background-color: #cc0000; 
+}
