@@ -236,7 +236,7 @@
                     </div>
                     <div class="action-group">
                         <button class="btn-tool btn-export" onclick="window.exportToExcel()" title="Tải danh sách về máy">
-                            <i class="fas fa-file-excel"></i> Xuất
+                            <i class="fas fa-file-excel"></i> Xuất Excel
                         </button>
                     </div>
                 </div>
@@ -248,8 +248,10 @@
                     </table>
                 </div>
                 <div id="empty-list-msg" style="text-align: center; margin-top: 20px; color: #666; display: none;">Chưa có môn sinh nào.</div>
-                <div id="attendance-actions" style="text-align: center; margin-top: 20px; display: none;">
-                    <button onclick="window.saveDailyAttendance()" class="btn-save-attendance"><i class="fas fa-save"></i> Lưu Điểm Danh Hôm Nay</button>
+                
+                <div id="attendance-actions" style="text-align: right; margin-top: 20px; display: none; align-items: center; justify-content: flex-end; gap: 15px;">
+                    <span id="attendance-summary" style="font-weight: bold; color: var(--vovinam-blue); display: none;"></span>
+                    <button onclick="window.saveDailyAttendance()" class="btn-save-attendance"><i class="fas fa-save"></i> Lưu Điểm Danh</button>
                 </div>
             </div>
         </section>
@@ -263,7 +265,7 @@
             <div class="shop-container">
                 <div class="product-grid">
                     <div class="product-card">
-                        <img src="võ phục.jpg" alt="Võ Phục">
+                        <img src="https://vovinam.vn/wp-content/uploads/2019/04/vo-phuc-vovinam-1.jpg" alt="Võ Phục">
                         <h4>Võ Phục</h4><p class="price">250k</p><button class="btn-add-cart" onclick="alert('Đã thêm!')">Mua</button>
                     </div>
                     <div class="product-card">
@@ -315,6 +317,6 @@
 
     <footer><p>Liên hệ BCN: 0922904904</p><p>&copy; Vovinam Ea M'droh</p></footer>
 
-    <script type="module" src="script.js?v=21.0"></script>
+    <script type="module" src="script.js?v=22.0"></script>
 </body>
 </html>
